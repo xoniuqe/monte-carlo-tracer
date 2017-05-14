@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.2 FATAL_ERROR)
 project(hpc VERSION 0.1 LANGUAGES CXX)
 
-
+set(CMAKE_CXX_STANDARD 11)
 # Must use GNUInstallDirs to install libraries into correct
 # locations on all platforms.
 include(GNUInstallDirs)
