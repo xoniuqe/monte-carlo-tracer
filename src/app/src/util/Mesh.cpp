@@ -31,9 +31,9 @@ Mesh::Mesh(const std::vector<Vertex>& verts, const std::vector<GLuint>& indices)
   glEnableVertexAttribArray(0);
   glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), 0);
   glEnableVertexAttribArray(1);
-  glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*) 3);
+  glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*) (3 * sizeof(float)));
   glEnableVertexAttribArray(2);
-  glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*) 6);
+glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*) (6 * sizeof(float)));
   glBindVertexArray(0);
 }
 
@@ -44,6 +44,7 @@ Mesh::~Mesh() {
 void Mesh::render() {
   glBindVertexArray(mVertexArrayId);
   glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, mIndexBufferId);
+  //glDrawElements(GL_QUADS, mIndices.size(), GL_UNSIGNED_INT, 0);
   glDrawElements(GL_TRIANGLES, mIndices.size(), GL_UNSIGNED_INT, 0);
   glBindVertexArray(0);
 }

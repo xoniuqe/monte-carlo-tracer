@@ -55,16 +55,24 @@ int main(int argc, char * argv[]) {
 
   glewInit();
 
+  std::cout << "Error: " << glGetError() << " " << GL_NO_ERROR << std::endl;
   Assimp::Importer importer;
   const aiScene* aiScene = importer.ReadFile("../data/teapot.obj", aiProcess_Triangulate | aiProcess_GenNormals);
 
   programId = LoadShaders("../shader/vert.glsl", "../shader/frag.glsl");
+  glUseProgram(programId);
   matrixId = glGetUniformLocation(programId, "MVP");
+  std::cout << "Error: " << glGetError() << " " << GL_NO_ERROR << std::endl;
   locM = glGetUniformLocation(programId, "V");
+  std::cout << "Error: " << glGetError() << " " << GL_NO_ERROR << std::endl;
   locV= glGetUniformLocation(programId, "M");
+  std::cout << "Error: " << glGetError() << " " << GL_NO_ERROR << std::endl;
   locLight= glGetUniformLocation(programId, "lightPosition");
-  Projection = glm::perspective(glm::radians(90.0f), 4.f / 3.f, 0.1f, 100.f);
+  std::cout << "Error: " << glGetError() << " " << GL_NO_ERROR << std::endl;
 
+  glUseProgram(0);
+
+  Projection = glm::perspective(glm::radians(90.0f), 4.0f / 3.0f, 0.1f, 100.0f);
   View = glm::lookAt(glm::vec3(4,3,3), glm::vec3(0,0,0), glm::vec3(0,1,0));
 
   Model = glm::mat4(1.f);
@@ -78,7 +86,7 @@ int main(int argc, char * argv[]) {
     loadTeapot(aiScene);
   } else {
     std::cerr << std::string(importer.GetErrorString()) << std::endl;
-  }
+   }
   testMesh();
   //  Vector3 test(1.0,1.0,1.0);
   //  Vector3 test2(0.0, 2.0, 0.0);
@@ -89,6 +97,7 @@ int main(int argc, char * argv[]) {
 
   //  std::cout << "x: " << test.x << " y: " << test.y << " z: " << test.z << std::endl;
 
+  std::cout << "Error: " << glGetError() << " " << GL_NO_ERROR << std::endl;
   //nur ein test!
 	while(!quit) {
         input();
@@ -106,6 +115,7 @@ void display() {
   glEnable(GL_DEPTH_TEST);
   glDepthFunc(GL_LESS);
   glEnable(GL_CULL_FACE);
+  
   glClearColor(0.0,0.0,0.0,1.0);
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
   glUseProgram(programId);
@@ -114,9 +124,8 @@ void display() {
   glUniform3f(locLight, LightPosition.x, LightPosition.y, LightPosition.z);
   glUniformMatrix4fv(locM, 1, GL_FALSE, &Model[0][0]);
   glUniformMatrix4fv(locV, 1, GL_FALSE, &View[0][0]);
-  //glColor3f(1.f, 1.f, 1.f);
   scene->render();
-
+  glUseProgram(0);
   SDL_GL_SwapWindow(window);
 }
 
@@ -180,7 +189,9 @@ void loadTeapot(const aiScene* aiScene) {
       vert.normal.z = mesh->mNormals[j].z;
 
 
-      vert.color = glm::vec3(1.f, 1.f, 0.f);
+      vert.color.x = 0.5f;
+      vert.color.y = 0.5f;
+      vert.color.z = 0.5f;
       vertices.push_back(vert);
       //normals.push_back(norm);
 
