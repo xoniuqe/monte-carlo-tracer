@@ -72,7 +72,7 @@ int main(int argc, char * argv[]) {
 
   glUseProgram(0);
 
-  Projection = glm::perspective(glm::radians(90.0f), 4.0f / 3.0f, 0.1f, 100.0f);
+  Projection = glm::perspective(glm::radians(45.0f), 4.0f / 3.0f, 0.1f, 100.0f);
   View = glm::lookAt(glm::vec3(4,3,3), glm::vec3(0,0,0), glm::vec3(0,1,0));
 
   Model = glm::mat4(1.f);
@@ -83,7 +83,7 @@ int main(int argc, char * argv[]) {
 
   scene = new Scene();
   if(aiScene) {
-    loadTeapot(aiScene);
+    //loadTeapot(aiScene);
   } else {
     std::cerr << std::string(importer.GetErrorString()) << std::endl;
    }
@@ -142,26 +142,51 @@ void testMesh() {
   std::vector<Vertex> vertices;
   std::vector<GLuint> indices;
 
-  Vertex a,b,c;
-  a.position = glm::vec3(-1.f, -1.f, 0.f);
-  b.position = glm::vec3(1.f, -1.f, 0.f);
-  c.position = glm::vec3(0.f, 1.f, 0.f);
+  Vertex a,b,c,d;
+  a.position = glm::vec3(-1.f, -1.f, -1.f);//-1.f);
+  b.position = glm::vec3(1.f, -1.f, -1.f);//-1.f);
+  c.position = glm::vec3(1.f, -1.f, 1.f);//-1.f);
+  d.position = glm::vec3(-1.f, -1.f, 1.f);//-1.f);
 
-  a.normal = glm::vec3(0.f,1.f,0.f);
-  b.normal = a.normal;
-  c.normal = a.normal;
-
-  a.color = glm::vec3(1.f,1.f,1.f);
-  b.color = a.color;
-  c.color = a.color;
+  a.normal = b.normal = c.normal = d.normal = glm::vec3(0.f,1.f,0.f);
+  a.color = b.color = c.color = d.color = glm::vec3(0.2,1.0,0.2);
 
   vertices.push_back(a);
   vertices.push_back(b);
   vertices.push_back(c);
+  vertices.push_back(d);
+
   indices.push_back(0);
   indices.push_back(1);
   indices.push_back(2);
+  //  indices.push_back(3);
+  indices.push_back(0);
+  indices.push_back(2);
+  indices.push_back(3);
+  Vertex e,f,g,h;
+  e.position = glm::vec3(-1.f, 1.f, -1.f);//-1.f);
+  f.position = glm::vec3(1.f, 1.f, -1.f);//-1.f);
+  g.position = glm::vec3(1.f, 1.f, 1.f);//-1.f);
+  h.position = glm::vec3(-1.f, 1.f, 1.f);//-1.f);
 
+  e.normal = f.normal = g.normal = h.normal = glm::vec3(0.f,-1.f,0.f);
+  a.color = b.color = c.color = d.color = glm::vec3(0.2,1.0,0.2);
+
+  vertices.push_back(e);
+  vertices.push_back(f);
+  vertices.push_back(g);
+  vertices.push_back(h);
+
+  indices.push_back(0);
+  indices.push_back(1);
+  indices.push_back(4);
+  indices.push_back(1);
+  indices.push_back(5);
+  indices.push_back(4);
+
+  //indices.push_back(0);
+  //indices.push_back(4);
+  //indices.push_back(5);
   scene->addMesh(new Mesh(std::move(vertices), std::move(indices)));
 
 }

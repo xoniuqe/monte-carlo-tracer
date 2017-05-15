@@ -17,18 +17,15 @@ void main(void)
   float lightPower = 50.0f;
 
   float distance = length(lPos - mposition);
-
+  
   vec3 n = normalize(normal);
   vec3 l = normalize(lightDirection);
 
-  //n = abs(n);
   float cosTheta = clamp(dot(n,l),0.f,1.f);
 
   vec3 E = normalize(eyeDirection);
   vec3 R = reflect(-l,n);
 
   float cosAlpha = clamp(dot(E,R),0.f,1.f);
- // fragmentColor = n;
   fragmentColor = color * lightColor * lightPower * cosTheta / (distance * distance) + vec3(0.3,0.3,0.3) * lightColor * lightPower * pow(cosAlpha,5.f) / (distance * distance);
-  //fragmentColor = n;
 }

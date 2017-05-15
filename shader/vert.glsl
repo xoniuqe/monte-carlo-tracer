@@ -27,5 +27,6 @@ void main(void)
 
   mat4 normalMatrix = V * transpose(inverse(M));
   normal = normalize(V * M * vec4(in_normal,0)).xyz;
+  //normal = normalize(V * M * vec4(0,1,0,0)).xyz;
   //normal = normalize(normalMatrix * vec4(in_normal, 0.0)).xyz;
 }
