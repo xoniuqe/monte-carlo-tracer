@@ -18,10 +18,10 @@ class Mesh {
  public:
   Mesh(const std::vector<Vertex>& verts, const std::vector<GLuint>& indices);
   ~Mesh();
-  int intersect(const glm::vec3& origin, const glm::vec3& direction, float* out);
+  int intersect(const glm::vec3& origin, const glm::vec3& direction, float* out_t, glm::vec3* out_n);
   void render();
- private:
   int intersectTriangle(const glm::vec3& a, const glm::vec3& b, const glm::vec3& c, const glm::vec3& origin, const glm::vec3& direction, float* out);
+ private:
   glm::vec3 mCenter;
   GLuint mVertexArrayId;
   GLuint mVertexBufferId;

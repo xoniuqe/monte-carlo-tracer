@@ -4,6 +4,7 @@
 #include <vector>
 #include <glm/glm.hpp>
 #include "util/Mesh.h"
+#include "util/Light.h"
 
 
 class Scene {
@@ -11,8 +12,9 @@ class Scene {
   Scene();
   void render();
   void addMesh(Mesh* mesh);
-  int intersection(const glm::vec3& origin, const glm::vec3& dir, float* out_t, Mesh* out_mesh) const;
-
+  void addLight(Light* light);
+  int intersection(const glm::vec3& origin, const glm::vec3& dir, float* out_t, glm::vec3* out_n, Mesh* out_mesh) const; 
+  std::vector<Light*> mLights;
  private:
   std::vector<Mesh*> mMeshes;
   int mNumMeshes;

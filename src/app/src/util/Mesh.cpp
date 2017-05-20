@@ -3,6 +3,7 @@
 
 #include <cmath>
 #include <iostream>
+#include <glm/gtc/constants.hpp>
 
 Mesh::Mesh(const std::vector<Vertex>& verts, const std::vector<GLuint>& indices) {
   mVertices = verts;
@@ -49,25 +50,26 @@ void Mesh::render() {
   glBindVertexArray(0);
 }
 
-int Mesh::intersect(const glm::vec3& origin, const glm::vec3& direction, float* out) {
+int Mesh::intersect(const glm::vec3& origin, const glm::vec3& direction, float* out_t, glm::vec3* out_n) {
   int result = 0;
   float tmp = 0.0;
+  float best = glm::zero<float>();
+  glm::vec3 n;
   for(int i = 0; i < mIndices.size(); i += 3) {
     Vertex a = mVertices.at(mIndices.at(i));
     Vertex b = mVertices.at(mIndices.at(i+1));
     Vertex c = mVertices.at(mIndices.at(i+2));
-    
+
+    glm::vec3 tmpn = glm::normalize(a.normal + b.normal + c.normal);
     int intersection = intersectTriangle(a.position, b.position, c.position, origin, direction, &tmp);
-    if(!result && intersection) {
-      *out = tmp;
-    } else {
-      //Get closest intersection
-    }
-    if(intersection) {
+    if((!result || tmp < best) && intersection && tmp > 0.00001f && glm::dot(tmpn, direction) <= glm::zero<float>()) {
+      best = tmp;
+      n = glm::normalize(a.normal + b.normal + c.normal);
       result = 1;
-      glm::vec3 p = origin + direction * tmp;
     }
   }
+  *out_t = best;
+  *out_n = n;
   return result;
 }
 
@@ -81,9 +83,10 @@ int Mesh::intersectTriangle(const glm::vec3& a, const glm::vec3& b, const glm::v
   P = glm::cross(direction, edge2);
 
   det = glm::dot(edge1, P);
+
   //det near zero: ray in plane with a-b-c
   //not culling?
-  if(det > -EPSILON && det > EPSILON) return 0;
+  if(det > -glm::zero<float>() && det < glm::zero<float>()) return 0;
   inv_det = 1.f / det;
 
   T = origin - a;
@@ -97,11 +100,11 @@ int Mesh::intersectTriangle(const glm::vec3& a, const glm::vec3& b, const glm::v
 
   v = glm::dot(direction, Q) * inv_det;
   //intersection outside of a-b-c
-  if(v < 0.f || u > 1.f) return 0;
+  if(v < 0.f || u + v> 1.f) return 0;
 
   t = glm::dot(edge2, Q) * inv_det;
 
-  if(t > EPSILON) {
+  if(t > glm::zero<float>()) {
     *out = t;
     return 1; 
   }

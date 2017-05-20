@@ -2,6 +2,9 @@ add_executable(app
 	src/app.cpp
   src/Scene.h
   src/Scene.cpp
+  src/Camera.h
+  src/MonteCarloPathtracer.h
+  src/MonteCarloPathtracer.cpp
   src/util/Mesh.h
   src/util/Mesh.cpp
   src/shader/LoadShader.h
