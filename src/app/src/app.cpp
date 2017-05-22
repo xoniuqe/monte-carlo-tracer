@@ -18,12 +18,7 @@
 #include "util/Light.h"
 
 int setupWindow(int width, int height);
-void setupScene();
 void setupScreenTexture();
-void setupCamera();
-
-void startRaytracer();
-void displayScreen();
 void display();
 //void loop();
 void input();
@@ -32,48 +27,76 @@ void loadTeapot(const aiScene* scene);
 
 SDL_Window* window;
 SDL_GLContext context;
-
 bool quit = false;
 Scene *scene;
 
 GLuint screenVBO, programId, tracerTexture;
 GLuint matrixId, locM, locV, locLight;
-glm::mat4 MVP, Projection, Model, View;
+glm::mat4 MVP, Model;
 glm::vec3 LightPosition;
 Camera* camera;
 MonteCarloPathtracer* mcp;
 int renderMode = 1;
-int WIDTH = 200;
-int HEIGHT = 150;
+int WIDTH = 800;
+int HEIGHT = 600;
 int main(int argc, char * argv[]) {
-
-  if(!setupWindow(800, 600)){
+  if(setupWindow(800,600)){
     return 1;
   }
   glewInit();
-  std::cout << "after window setup\n";
-  setupScene();
-  std::cout << "after scene setup\n";
-  setupCamera();
-  std::cout << "after camera setup\n";
+
+  std::cout << "Error: " << glGetError() << " " << GL_NO_ERROR << std::endl;
+  Assimp::Importer importer;
+  const aiScene* aiScene = importer.ReadFile("../data/test.obj", aiProcess_Triangulate | aiProcess_GenNormals);
   
   programId = LoadShaders("../shader/vert.glsl", "../shader/frag.glsl");
   glUseProgram(programId);
   matrixId = glGetUniformLocation(programId, "MVP");
+  std::cout << "Error: " << glGetError() << " " << GL_NO_ERROR << std::endl;
   locM = glGetUniformLocation(programId, "V");
+  std::cout << "Error: " << glGetError() << " " << GL_NO_ERROR << std::endl;
   locV= glGetUniformLocation(programId, "M");
+  std::cout << "Error: " << glGetError() << " " << GL_NO_ERROR << std::endl;
   locLight= glGetUniformLocation(programId, "lightPosition");
+  std::cout << "Error: " << glGetError() << " " << GL_NO_ERROR << std::endl;
 
   glUseProgram(0);
+  
+  camera = new Camera(glm::vec3(1,1,1), glm::vec3(0,0,0), 90.f, 4.f / 3.f, WIDTH, HEIGHT);
+  Model = glm::mat4(1.f); 
 
+  MVP = camera->mProjection * camera->mView * Model;
+  
+  LightPosition = glm::vec3(-0.2f,0.9,-0.2f);
 
+  scene = new Scene();
+  Light* light = new Light();
+  light->position = LightPosition;
+  light->color = glm::vec3(255,0,255);
+  light->power = 5.0f;
+  scene->addLight(light);
+  Light* light2 = new Light();
+  light2->position = glm::vec3(0.5f,0.9f, 0.5f);
+  light2->power = 5.f;
+  light2->color = glm::vec3(0,255,0);
+  scene->addLight(light2);
   mcp = new MonteCarloPathtracer(scene, camera);
+  if(aiScene) {
+    loadTeapot(aiScene);
+  } else {
+    std::cerr << std::string(importer.GetErrorString()) << std::endl;
+   }
+  testMesh();
   mcp->startPathtracing();
+  //mcp->test();
 
   setupScreenTexture();
- 
   
+  std::cout << "test: " << sizeof(glm::u8vec3) << std::endl;
+  //testMesh();
   
+  std::cout << "Error: " << glGetError() << " " << GL_NO_ERROR << std::endl;
+  //nur ein test!
 	while(!quit) {
         input();
         display(); 
@@ -107,7 +130,7 @@ void display() {
 
     glUniform3f(locLight, LightPosition.x, LightPosition.y, LightPosition.z);
     glUniformMatrix4fv(locM, 1, GL_FALSE, &Model[0][0]);
-    glUniformMatrix4fv(locV, 1, GL_FALSE, &View[0][0]);
+    glUniformMatrix4fv(locV, 1, GL_FALSE, &camera->mView[0][0]);
     scene->render();
     glUseProgram(0);
   } else {
@@ -143,91 +166,6 @@ void input() {
       }
     }
   }
-}
-
-int setupWindow(int width, int height) {
-  // SDL mit dem Grafiksystem initialisieren.
-  if(SDL_Init(SDL_INIT_VIDEO) == -1)
-    {
-      // Ups, das hat nicht funktioniert!
-      // Wir geben die Fehlermeldung aus.
-      std::cerr << "Konnte SDL nicht initialisieren! Fehler: " << SDL_GetError() << std::endl;
-      return 0;
-    }
-  window = SDL_CreateWindow("Monte Carlo Raytracer", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, width,height, SDL_WINDOW_OPENGL);
-	if(window == NULL) {
-		//std::cerr << "window is null! << SDl_GetError() << std::endl;
-		return 0;
-	}
-	context = SDL_GL_CreateContext(window);
-
-  SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
-
-  SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
-
-  SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
-
-  SDL_GL_SetSwapInterval(1);
-  return 1;
-}
-
-void setupScene(){
-  Assimp::Importer importer;
-  const aiScene* aiScene = importer.ReadFile("../data/test.obj", aiProcess_Triangulate | aiProcess_GenNormals);
- 
-  scene = new Scene();
-  Light* light = new Light();
-  light->position = LightPosition;
-  light->color = glm::vec3(255,0,255);
-  light->power = 5.0f;
-  scene->addLight(light);
-  Light* light2 = new Light();
-  light2->position = glm::vec3(0.5f,0.9f, 0.5f);
-  light2->power = 5.f;
-  light2->color = glm::vec3(0,255,0);
-  scene->addLight(light2);
-  if(aiScene) {
-    loadTeapot(aiScene);
-  } else {
-    std::cerr << std::string(importer.GetErrorString()) << std::endl;
-  }
-  testMesh();
-}
-
-void setupCamera() {
-  camera = new Camera();
-  camera->mOrigin = glm::vec3(2,1,1);//4,3,3);
-  camera->mCenter = glm::vec3(0,0,0);
-  camera->mDirection = glm::normalize(camera->mOrigin - camera->mCenter);
-  camera->mFieldOfView = 90.0f;
-  camera->mAspectRatio = 4.0f / 3.0f;
-  camera->mWidth = WIDTH;
-  camera->mHeight = HEIGHT;
-  Projection = glm::perspective(glm::radians(90.0f), 4.0f / 3.0f, 0.1f, 100.0f);
-  View = glm::lookAt(camera->mOrigin, glm::vec3(0,0,0), glm::vec3(0,1,0));
-  Model = glm::mat4(1.f); 
-
-  MVP = Projection * View * Model;
-  camera->mProjection = Projection;
-  camera->mView = View;
-
-}
-
-void setupScreenTexture() {
-  glGenTextures(1, &tracerTexture);
-  glBindTexture(GL_TEXTURE_2D, tracerTexture);
-
-  glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-  glPixelStorei(GL_UNPACK_ROW_LENGTH, 0);
-  glPixelStorei(GL_UNPACK_SKIP_PIXELS, 0);
-  glPixelStorei(GL_UNPACK_SKIP_ROWS, 0);
-
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);//_TO_EDGE);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);//_TO_EDGE);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-  glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
-  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB8, WIDTH, HEIGHT, 0, GL_RGB, GL_UNSIGNED_BYTE, mcp->mImage); 
 }
 
 void testMesh() {
@@ -327,4 +265,50 @@ void loadTeapot(const aiScene* aiScene) {
     scene->addMesh(new Mesh(std::move(vertices), std::move(indices)));
   }
 
+}
+
+int setupWindow(int width, int height) {
+  std::cout << "Hallo Welt" << std::endl;
+	// SDL mit dem Grafiksystem initialisieren.
+  if(SDL_Init(SDL_INIT_VIDEO) == -1)
+    {
+      // Ups, das hat nicht funktioniert!
+      // Wir geben die Fehlermeldung aus.
+      std::cerr << "Konnte SDL nicht initialisieren! Fehler: " << SDL_GetError() << std::endl;
+      return 1;
+    }
+  window = SDL_CreateWindow("Monte Carlo Raytracer", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, 800,600, SDL_WINDOW_OPENGL);
+	if(window == NULL) {
+		//std::cerr << "window is null! << SDl_GetError() << std::endl;
+		return 1;
+	}
+	context = SDL_GL_CreateContext(window);
+
+  SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
+
+  SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
+
+  SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
+
+  SDL_GL_SetSwapInterval(1);
+
+  return 0;
+}
+
+void setupScreenTexture() {
+  glGenTextures(1, &tracerTexture);
+  glBindTexture(GL_TEXTURE_2D, tracerTexture);
+
+  glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+  glPixelStorei(GL_UNPACK_ROW_LENGTH, 0);
+  glPixelStorei(GL_UNPACK_SKIP_PIXELS, 0);
+  glPixelStorei(GL_UNPACK_SKIP_ROWS, 0);
+
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);//_TO_EDGE);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);//_TO_EDGE);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+  glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB8, WIDTH, HEIGHT, 0, GL_RGB, GL_UNSIGNED_BYTE, mcp->mImage);
+ 
 }

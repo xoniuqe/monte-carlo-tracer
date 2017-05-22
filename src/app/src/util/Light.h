@@ -7,8 +7,6 @@
 struct Light {
   glm::vec3 position, color;
   float power;
-  /*int intersects(const glm::vec3& origin, const glm::vec3& direction) {
-    return glm::cross(position - origin, direction) <= 10.f;
-  }*/
+  //  glm::vec3 getLightDirection(const glm::vec3 origin) = 0;
 };
 #endif

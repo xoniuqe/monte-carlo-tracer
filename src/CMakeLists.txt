@@ -1,7 +1,14 @@
 cmake_minimum_required(VERSION 3.2 FATAL_ERROR)
 project(hpc VERSION 0.1 LANGUAGES CXX)
 
+set(DCMAKE_CXX_COMPILER clang++)
 set(CMAKE_CXX_STANDARD 11)
+
+message("project sourc dir:")
+message(${PROJECT_SOURCE_DIR})
+list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake/modules/)
+message(${CMAKE_MODULE_PATH})
+
 # Must use GNUInstallDirs to install libraries into correct
 # locations on all platforms.
 include(GNUInstallDirs)
@@ -19,5 +26,5 @@ set_property(TARGET boost PROPERTY
 # Targets that we develop here
 enable_testing()
 #add_subdirectory(liblib)
+add_subdirectory(cmake/modules)
 add_subdirectory(app)
-

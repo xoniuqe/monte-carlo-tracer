@@ -12,9 +12,6 @@ class MonteCarloPathtracer {
   ~MonteCarloPathtracer();
   void startPathtracing();
   glm::u8vec3* mImage;
-  void test();
-  glm::u8vec3* mtest;
-  Mesh* testTriangle;
  private:
   std::function<float()> mRandom;
   int mNumSamples;
