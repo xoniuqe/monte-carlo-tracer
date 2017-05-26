@@ -14,7 +14,7 @@ out vec3 fragmentColor;
 void main(void)
 {
   vec3 lightColor = vec3(1,1,1);
-  float lightPower = 50.0f;
+  float lightPower = 10.0f;
 
   float distance = length(lPos - mposition);
   

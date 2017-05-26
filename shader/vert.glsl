@@ -18,7 +18,7 @@ uniform vec3 lightPosition;
 
 void main(void)
 {
-  lPos = vec3(2,4,-3);
+  lPos = vec3(0,0.9,0);
   gl_Position = MVP * vec4(in_position, 1);
   color = in_color;
   mposition = (M * vec4(in_position,1)).xyz;
