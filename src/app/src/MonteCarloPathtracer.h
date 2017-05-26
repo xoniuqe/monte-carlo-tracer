@@ -19,7 +19,7 @@ class MonteCarloPathtracer {
   Camera* mCamera;
   int mScreenWidth, mScreenHeight;
 
-  glm::u8vec3 traceRay(const glm::vec3& origin, const glm::vec3& normal, const int depth);
+  glm::vec3 traceRay(const glm::vec3& origin, const glm::vec3& direction, const int depth);//const Vertex& vert, const int depth);//const glm::vec3& normal, const int depth);
   glm::vec3 randomDirection(const glm::vec3& n);
 };
 #endif

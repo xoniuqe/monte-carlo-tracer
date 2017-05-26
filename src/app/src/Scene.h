@@ -13,7 +13,7 @@ class Scene {
   void render();
   void addMesh(Mesh* mesh);
   void addLight(Light* light);
-  int intersection(const glm::vec3& origin, const glm::vec3& dir, float* out_t, glm::vec3* out_n, Mesh* out_mesh) const; 
+  int intersection(const glm::vec3& origin, const glm::vec3& dir, float* out_t, Vertex* out/*glm::vec3* out_n*/, Mesh* out_mesh) const; 
   std::vector<Light*> mLights;
  private:
   std::vector<Mesh*> mMeshes;

@@ -18,10 +18,11 @@ class Mesh {
  public:
   Mesh(const std::vector<Vertex>& verts, const std::vector<GLuint>& indices);
   ~Mesh();
-  int intersect(const glm::vec3& origin, const glm::vec3& direction, float* out_t, glm::vec3* out_n);
+  int intersect(const glm::vec3& origin, const glm::vec3& direction, float* out_t, Vertex* out);//glm::vec3* out_n);
   void render();
-  int intersectTriangle(const glm::vec3& a, const glm::vec3& b, const glm::vec3& c, const glm::vec3& origin, const glm::vec3& direction, float* out);
  private:
+  Vertex barcentricInterpolation(const Vertex& a, const Vertex&b, const Vertex& c, const glm::vec3& p);
+  int intersectTriangle(const glm::vec3& a, const glm::vec3& b, const glm::vec3& c, const glm::vec3& origin, const glm::vec3& direction, float* out);
   glm::vec3 mCenter;
   GLuint mVertexArrayId;
   GLuint mVertexBufferId;

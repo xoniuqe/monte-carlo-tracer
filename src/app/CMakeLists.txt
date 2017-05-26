@@ -8,6 +8,11 @@ add_executable(app
   src/MonteCarloPathtracer.cpp
   src/util/Mesh.h
   src/util/Mesh.cpp
+  src/util/Light.h
+  src/util/AreaLight.h
+  src/util/AreaLight.cpp
+  src/util/PointLight.h
+  src/util/PointLight.cpp
   src/shader/LoadShader.h
   src/shader/LoadShader.cpp)
 
@@ -30,5 +35,5 @@ PKG_SEARCH_MODULE(GLEW REQUIRED glew)
 PKG_SEARCH_MODULE(ASSIMP REQUIRED assimp)
 
 INCLUDE_DIRECTORIES(${SDL2_INCLUDE_DIRS} ${SDL2IMAGE_INCLUDE_DIRS} ${GLM} ${GLEW_INCLUDE_DIRS} ${ASSIMP_INCLUDE_DIRS} ${TBB_INCLUDE_DIRS})
-TARGET_LINK_LIBRARIES(app ${SDL2_LIBRARIES} ${SDL2IMAGE_LIBRARIES} ${GLM_LIBRARIES} ${GLEW_LIBRARIES} ${ASSIMP_LIBRARIES} ${TBB_LIBRARIES})
+TARGET_LINK_LIBRARIES(app ${SDL2_LIBRARIES} ${SDL2IMAGE_LIBRARIES} ${GLM_LIBRARIES} ${GLEW_LIBRARIES} ${ASSIMP_LIBRARIES} ${TBB_LIBRARIES} -pthread)
 #SET(CMAKE_EXE_LINK_FLAGS "-ltbb")

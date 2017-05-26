@@ -4,9 +4,10 @@
 #include<glm/glm.hpp>
 
 //currently just a point light
-struct Light {
+class Light {
+ public:
   glm::vec3 position, color;
   float power;
-  //  glm::vec3 getLightDirection(const glm::vec3 origin) = 0;
+  virtual glm::vec3 getLightDirection(const glm::vec3& origin) const = 0;
 };
 #endif

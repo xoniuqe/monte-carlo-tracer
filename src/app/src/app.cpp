@@ -11,14 +11,18 @@
 #include<glm/gtc/matrix_transform.hpp>
 #include<glm/gtc/type_ptr.hpp>
 
+#include<thread>
+
 #include "Camera.h"
 #include "MonteCarloPathtracer.h"
 #include "Scene.h"
 #include "shader/LoadShader.h"
-#include "util/Light.h"
+#include "util/PointLight.h"
+#include "util/AreaLight.h"
 
 int setupWindow(int width, int height);
 void setupScreenTexture();
+void fillTexture();
 void display();
 //void loop();
 void input();
@@ -30,6 +34,8 @@ SDL_GLContext context;
 bool quit = false;
 Scene *scene;
 
+std::thread renderThread;
+
 GLuint screenVBO, programId, tracerTexture;
 GLuint matrixId, locM, locV, locLight;
 glm::mat4 MVP, Model;
@@ -37,8 +43,8 @@ glm::vec3 LightPosition;
 Camera* camera;
 MonteCarloPathtracer* mcp;
 int renderMode = 1;
-int WIDTH = 800;
-int HEIGHT = 600;
+int WIDTH = 300;
+int HEIGHT = 200;
 int main(int argc, char * argv[]) {
   if(setupWindow(800,600)){
     return 1;
@@ -47,7 +53,7 @@ int main(int argc, char * argv[]) {
 
   std::cout << "Error: " << glGetError() << " " << GL_NO_ERROR << std::endl;
   Assimp::Importer importer;
-  const aiScene* aiScene = importer.ReadFile("../data/test.obj", aiProcess_Triangulate | aiProcess_GenNormals);
+  const aiScene* aiScene = importer.ReadFile("../data/scene.obj", aiProcess_Triangulate | aiProcess_GenNormals);
   
   programId = LoadShaders("../shader/vert.glsl", "../shader/frag.glsl");
   glUseProgram(programId);
@@ -62,7 +68,7 @@ int main(int argc, char * argv[]) {
 
   glUseProgram(0);
   
-  camera = new Camera(glm::vec3(1,1,1), glm::vec3(0,0,0), 90.f, 4.f / 3.f, WIDTH, HEIGHT);
+  camera = new Camera(glm::vec3(0,0,1), glm::vec3(0,0,0), 90.f, 4.f / 3.f, WIDTH, HEIGHT);
   Model = glm::mat4(1.f); 
 
   MVP = camera->mProjection * camera->mView * Model;
@@ -70,36 +76,40 @@ int main(int argc, char * argv[]) {
   LightPosition = glm::vec3(-0.2f,0.9,-0.2f);
 
   scene = new Scene();
-  Light* light = new Light();
-  light->position = LightPosition;
-  light->color = glm::vec3(255,0,255);
-  light->power = 5.0f;
+  /*PointLight* light = new PointLight(LightPosition);
+  //light->position = LightPosition;
+  light->color = glm::vec3(1.f,0,1.f);
+  light->power = 50.0f;
   scene->addLight(light);
-  Light* light2 = new Light();
-  light2->position = glm::vec3(0.5f,0.9f, 0.5f);
-  light2->power = 5.f;
-  light2->color = glm::vec3(0,255,0);
-  scene->addLight(light2);
-  mcp = new MonteCarloPathtracer(scene, camera);
+  PointLight* light2 = new PointLight(glm::vec3(0.5f,0.9f,0.5f));
+  //light2->position = glm::vec3(0.5f,0.9f, 0.5f);
+  light2->power = 50.f;
+  light2->color = glm::vec3(0,1.f,0);
+  scene->addLight(light2);*/
+  AreaLight* light = new AreaLight(LightPosition, 0.2f, 0.2f);
+  light->color = glm::vec3(1.f,1.f,1.f);
+  light->power = 50.f;
+  scene->addLight(light);
+  mcp = new MonteCarloPathtracer(scene, camera, 4);
   if(aiScene) {
     loadTeapot(aiScene);
   } else {
     std::cerr << std::string(importer.GetErrorString()) << std::endl;
    }
-  testMesh();
-  mcp->startPathtracing();
+  //testMesh();
+  //  std::thread pathTracing([=](){mcp->startPathtracing();});
   //mcp->test();
 
   setupScreenTexture();
   
+  //  std::thread pathTracing([=](){mcp->startPathtracing();});
   std::cout << "test: " << sizeof(glm::u8vec3) << std::endl;
   //testMesh();
   
   std::cout << "Error: " << glGetError() << " " << GL_NO_ERROR << std::endl;
-  //nur ein test!
-	while(!quit) {
-        input();
-        display(); 
+  while(!quit) {
+    input();
+    display(); 
   }
   
   delete mcp;
@@ -134,9 +144,10 @@ void display() {
     scene->render();
     glUseProgram(0);
   } else {
+    glBindTexture(GL_TEXTURE_2D, tracerTexture);
+    fillTexture();
     glEnable(GL_TEXTURE_2D); 
     glUseProgram(0);
-    glBindTexture(GL_TEXTURE_2D, tracerTexture);
   
     glBegin(GL_QUADS);
     // glColor3f(1.0,0.0,0.0);
@@ -149,6 +160,7 @@ void display() {
     glTexCoord2f(0.0f, 1.0f);
     glVertex3f(-1.0, 1.0, 0.0);
     glEnd();
+    glBindTexture(GL_TEXTURE_2D, 0);
   }
   SDL_GL_SwapWindow(window);
 }
@@ -163,6 +175,10 @@ void input() {
       if(event.key.keysym.sym == SDLK_1){
         renderMode += 1;
         renderMode %= 2;
+      }
+      if(event.key.keysym.sym == SDLK_r) {        
+        renderThread = std::thread([=](){mcp->startPathtracing();});
+        //std::thread pathTracing([=](){mcp->startPathtracing();});
       }
     }
   }
@@ -187,17 +203,17 @@ void testMesh() {
   l.position = glm::vec3(0.25f,-0.5f, 0.25f);
 
   a.normal = b.normal = c.normal = glm::vec3(0.f,1.f,0.f);
-  a.color = b.color = c.color    = glm::vec3(255,0,0);
+  a.color = b.color = c.color    = glm::vec3(1.f,0,0);
   
-  d.normal = e.normal = f.normal = glm::normalize(glm::vec3(0,-1,-2));
-  d.color =e.color = f.color = glm::vec3(0,0,0);
+  d.normal = e.normal = f.normal = glm::normalize(glm::vec3(0,1,-2));
+  d.color =e.color = f.color = glm::vec3(0.5f,0.5f,0.5f);
 
   g.normal = h.normal = i.normal = glm::normalize(glm::vec3(1,0,-1));
-  g.color = h.color = i.color = glm::vec3(0,0,0);
+  g.color = h.color = i.color = glm::vec3(0.f,1.f,0.f);
 
 
-  j.normal = k.normal = l.normal = glm::normalize(glm::vec3(-1,0,1));
-  j.color = k.color = l.color = glm::vec3(0,0,0);
+  j.normal = k.normal = l.normal = glm::normalize(glm::vec3(1,0,-1));
+  j.color = k.color = l.color = glm::vec3(0.5f,0,0);
   vertices.push_back(a);
   vertices.push_back(b);
   vertices.push_back(c);
@@ -268,12 +284,9 @@ void loadTeapot(const aiScene* aiScene) {
 }
 
 int setupWindow(int width, int height) {
-  std::cout << "Hallo Welt" << std::endl;
 	// SDL mit dem Grafiksystem initialisieren.
   if(SDL_Init(SDL_INIT_VIDEO) == -1)
     {
-      // Ups, das hat nicht funktioniert!
-      // Wir geben die Fehlermeldung aus.
       std::cerr << "Konnte SDL nicht initialisieren! Fehler: " << SDL_GetError() << std::endl;
       return 1;
     }
@@ -309,6 +322,9 @@ void setupScreenTexture() {
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
   glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
-  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB8, WIDTH, HEIGHT, 0, GL_RGB, GL_UNSIGNED_BYTE, mcp->mImage);
  
 }
+
+ void fillTexture() {
+   glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB8, WIDTH, HEIGHT, 0, GL_RGB, GL_UNSIGNED_BYTE, mcp->mImage);
+ }

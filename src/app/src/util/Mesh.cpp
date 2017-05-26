@@ -50,10 +50,11 @@ void Mesh::render() {
   glBindVertexArray(0);
 }
 
-int Mesh::intersect(const glm::vec3& origin, const glm::vec3& direction, float* out_t, glm::vec3* out_n) {
+int Mesh::intersect(const glm::vec3& origin, const glm::vec3& direction, float* out_t, Vertex* out) { //glm::vec3* out_n) {
   int result = 0;
   float tmp = 0.0;
   float best = glm::zero<float>();
+  Vertex res;
   glm::vec3 n;
   for(int i = 0; i < mIndices.size(); i += 3) {
     Vertex a = mVertices.at(mIndices.at(i));
@@ -66,10 +67,31 @@ int Mesh::intersect(const glm::vec3& origin, const glm::vec3& direction, float* 
       best = tmp;
       n = glm::normalize(a.normal + b.normal + c.normal);
       result = 1;
+      res = Mesh::barcentricInterpolation(a,b,c, origin + direction * tmp);
+      res.normal = glm::normalize(a.normal + b.normal + c.normal);
+      //res.color = glm::lengtht(glm::cross(b.position, c.p))
     }
   }
   *out_t = best;
-  *out_n = n;
+  //  *out_n = n;
+  *out = res;
+  return result;
+}
+
+Vertex Mesh::barcentricInterpolation(const Vertex& a, const Vertex&b, const Vertex& c, const glm::vec3& pos) {
+  Vertex result;
+  result.position = pos;
+  glm::vec3 v0 = b.position - a.position,v1 = c.position - a.position,v2 = pos - a.position;
+  float d00 = glm::dot(v0,v0);
+  float d01 = glm::dot(v0,v1);
+  float d11 = glm::dot(v1,v1);
+  float d20 = glm::dot(v2,v0);
+  float d21 = glm::dot(v2,v1);
+  float inv = 1.f / (d00 * d11 - d01 * d01);
+  float v = (d11 * d20 - d01 * d21) * inv;
+  float w = (d00 * d21 - d01 * d20) * inv;
+  float u = 1.f - v - w;
+  result.color = v * a.color + w * b.color + u * c.color;
   return result;
 }
 
