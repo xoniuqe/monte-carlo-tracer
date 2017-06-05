@@ -50,6 +50,21 @@ void Mesh::render() {
   glBindVertexArray(0);
 }
 
+std::vector<Triangle*> Mesh::triangles() const {
+  std::vector<Triangle*> triangles;
+  for(int i = 0; i < mIndices.size(); i += 3) {
+    Vertex a = mVertices.at(mIndices.at(i));
+    Vertex b = mVertices.at(mIndices.at(i+1));
+    Vertex c = mVertices.at(mIndices.at(i+2));
+    Triangle* triangle = new Triangle();
+    triangle->a = a;
+    triangle->b = b;
+    triangle->c = c;
+    triangles.push_back(triangle);
+  }
+  return triangles;
+}
+
 int Mesh::intersect(const glm::vec3& origin, const glm::vec3& direction, float* out_t, Vertex* out) { //glm::vec3* out_n) {
   int result = 0;
   float tmp = 0.0;
@@ -62,14 +77,13 @@ int Mesh::intersect(const glm::vec3& origin, const glm::vec3& direction, float* 
     Vertex c = mVertices.at(mIndices.at(i+2));
 
     glm::vec3 tmpn = glm::normalize(a.normal + b.normal + c.normal);
-    int intersection = intersectTriangle(a.position, b.position, c.position, origin, direction, &tmp);
+    int intersection = Mesh::intersectTriangle(a.position, b.position, c.position, origin, direction, &tmp);
     if((!result || tmp < best) && intersection && tmp > 0.00001f && glm::dot(tmpn, direction) <= glm::zero<float>()) {
       best = tmp;
       n = glm::normalize(a.normal + b.normal + c.normal);
       result = 1;
       res = Mesh::barcentricInterpolation(a,b,c, origin + direction * tmp);
       res.normal = glm::normalize(a.normal + b.normal + c.normal);
-      //res.color = glm::lengtht(glm::cross(b.position, c.p))
     }
   }
   *out_t = best;
