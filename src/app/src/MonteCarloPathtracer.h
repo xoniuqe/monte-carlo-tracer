@@ -8,7 +8,7 @@
 
 class MonteCarloPathtracer {
  public:
-  MonteCarloPathtracer(Scene* scene, Camera* camera, int numSamples=8);
+  MonteCarloPathtracer(Scene* scene, Camera* camera, int screenWidth, int screenHeight, int numSamples=8);
   ~MonteCarloPathtracer();
   void startPathtracing();
   glm::u8vec3* mImage;

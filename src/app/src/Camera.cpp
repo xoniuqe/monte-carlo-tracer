@@ -11,17 +11,38 @@ Camera::Camera(const glm::vec3& origin, const glm::vec3& center, const float& fo
   mWidth = screenWidth;
   mHeight = screenHeight;
   mProjection = glm::perspective(fov, ratio, 0.1f, 100.0f);
-  mView = glm::lookAt(mOrigin, mCenter, glm::vec3(0,1,0));
-
+  mUp = glm::vec3(0,1,0);
+  mView = glm::lookAt(mOrigin, mCenter, mUp);
+  mRotation = glm::mat4(1.f); 
 
   calculateScreenToWorld();
 }
 
+void Camera::rotate(const glm::mat4& rotation) {
+  mCurrentRotation = rotation * mRotation;
+  //mCurOrigin = glm::vec3(rotation * glm::vec4(mOrigin,1.f));
+  //mCurUp = glm::vec3(rotation * glm::vec4(mUp,0.f));
+  //mView = glm::lookAt(mCurOrigin, mCenter, mCurUp);
+  //mOrigin = newOrigin;
+  //mUp = newUp;
+  //mOrigion *= rotation;
+  //mView = rotation * mView;
+}
+
+void Camera::applyRotation() {
+  mRotation = mCurrentRotation;
+  //mCurrentRotation = mRotation;
+}
+
+glm::mat4 Camera::getRotationMatrix() const {
+  return mCurrentRotation;
+}
+
 void Camera::calculateScreenToWorld() {
   glm::mat4 inverseProjection= glm::inverse(mProjection);
-  glm::mat4 inverseView = glm::inverse(mView);
-  float invWidth = 1.f / (float) mWidth; 
-  float invHeight = 1.f / (float) mHeight; 
+  glm::mat4 inverseView = glm::inverse(mView);// * mRotation;
+  //float invWidth = 1.f / (float) mWidth; 
+  //float invHeight = 1.f / (float) mHeight; 
   glm::vec4 a(-1,-1,-1,1);
   glm::vec4 b(1,-1,-1,1);
   glm::vec4 c(1,1,-1,1);
@@ -41,7 +62,7 @@ void Camera::calculateScreenToWorld() {
   p3 = inverseView * p3;
   mDeltaX = p1 - p0;
   mDeltaY = p3 - p0;
-  mDeltaX *= invWidth;
-  mDeltaY *= invHeight;
+  //mDeltaX *= invWidth;
+  //mDeltaY *= invHeight;
   mP0 = p0;
 }

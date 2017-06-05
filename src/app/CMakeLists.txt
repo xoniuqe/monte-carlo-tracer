@@ -4,8 +4,15 @@ add_executable(app
   src/Scene.cpp
   src/Camera.h
   src/Camera.cpp
+  src/ArcBall.h
+  src/ArcBall.cpp
   src/MonteCarloPathtracer.h
   src/MonteCarloPathtracer.cpp
+  src/geometry/geometry.h
+  src/geometry/Octree.h
+  src/geometry/Octree.cpp
+  src/geometry/OctreeNode.h
+  src/geometry/OctreeNode.cpp
   src/util/Mesh.h
   src/util/Mesh.cpp
   src/util/Light.h

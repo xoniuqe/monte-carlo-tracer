@@ -5,7 +5,8 @@
 #include <glm/glm.hpp>
 #include "util/Mesh.h"
 #include "util/Light.h"
-
+#include "geometry/geometry.h"
+#include "geometry/Octree.h"
 
 class Scene {
  public:
@@ -13,9 +14,11 @@ class Scene {
   void render();
   void addMesh(Mesh* mesh);
   void addLight(Light* light);
-  int intersection(const glm::vec3& origin, const glm::vec3& dir, float* out_t, Vertex* out/*glm::vec3* out_n*/, Mesh* out_mesh) const; 
+  void calculateOctree();
+  int intersection(const glm::vec3& origin, const glm::vec3& diretion, float* out_t, Vertex* out, Mesh* out_mesh) const;
   std::vector<Light*> mLights;
  private:
+  Octree* _octree;
   std::vector<Mesh*> mMeshes;
   int mNumMeshes;
 
