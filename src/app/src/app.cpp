@@ -20,6 +20,7 @@
 #include "shader/LoadShader.h"
 #include "util/PointLight.h"
 #include "util/AreaLight.h"
+#include "util/Material.h"
 
 #include "geometry/geometry.h"
 #include "geometry/Octree.h"
@@ -51,8 +52,8 @@ MonteCarloPathtracer* mcp;
 int renderMode = 1;
 int WIDTH = 800;
 int HEIGHT = 600;
-int renderScreenWidth = 300;
-int renderScreenHeight = 200;
+int renderScreenWidth = 800;
+int renderScreenHeight = 600;
 ArcBall* arcBall;
 
 OctreeNode* test;
@@ -74,7 +75,7 @@ int main(int argc, char * argv[]) {
 
   glUseProgram(0);
   
-  camera = new Camera(glm::vec3(-1,1,-1), glm::vec3(0,0,0), 90.f, 4.f / 3.f, WIDTH, HEIGHT);
+  camera = new Camera(glm::vec3(0,0,-1), glm::vec3(0,0,0), 90.f, 4.f / 3.f, WIDTH, HEIGHT);
   Model = glm::mat4(1.f);
 
   float radius = sqrtf(float(WIDTH * WIDTH + HEIGHT * HEIGHT)) * 0.5f;
@@ -109,7 +110,7 @@ int main(int argc, char * argv[]) {
   }
   test->subdivide();*/
   scene->calculateOctree();
-  mcp = new MonteCarloPathtracer(scene, camera, renderScreenWidth, renderScreenHeight, 4);
+  mcp = new MonteCarloPathtracer(scene, camera, renderScreenWidth, renderScreenHeight, 8);
   while(!quit) {
     input();
     display(); 
@@ -227,8 +228,17 @@ void loadScene(const aiScene* aiScene) {
 
   std::vector<glm::vec3> colors;
   for(auto i = 0; i < aiScene->mNumMeshes; i++) {
-    aiMaterial *mtl = aiScene->mMaterials[aiScene->mMeshes[i]->mMaterialIndex];
+    int index = aiScene->mMeshes[i]->mMaterialIndex;
+    aiMaterial *mtl = aiScene->mMaterials[index];
     aiColor4D diffuse;
+
+    //if(Material::materials[index] == NULL) {
+    // Material *mat = new Material(index);
+    // mtl->Get(AI_MATKEY_SHININESS, mat->shininess);
+    // mtl->Get(AI_MATKEY_REFRACTI, mat->refraction_index);
+      //mtl->Get()
+      //}
+    
     if(aiGetMaterialColor(mtl, AI_MATKEY_COLOR_DIFFUSE, &diffuse) == AI_SUCCESS) {
       glm::vec3 color(diffuse.r, diffuse.g, diffuse.b);
       colors.push_back(color);
@@ -268,6 +278,7 @@ void loadScene(const aiScene* aiScene) {
         indices.push_back(face.mIndices[k]);
       }
     }
+    std::cout << "added mesh\n";
     scene->addMesh(new Mesh(std::move(vertices), std::move(indices)));
   }
 

@@ -6,9 +6,12 @@
 #include <glm/gtc/constants.hpp>
 #include <set>
 #include <stdexcept>
+#include <stack>
 
 #include "Octree.h"
 #include "OctreeNode.h"
+
+class Mesh;
 
 struct Vertex {
   glm::vec3 position;
@@ -17,6 +20,7 @@ struct Vertex {
 };
 
 struct Triangle {
+  const Mesh* mesh;
   Vertex a,b,c;
   Vertex& operator[] (int id) {
     if(id == 0)
@@ -79,7 +83,7 @@ class Intersection {
   static int triangleBoxOverlap(const glm::vec3& center, const glm::vec3& halfsize, const Triangle& triangle) {
     glm::vec3 v0,v1,v2, normal, e0, e1, e2;
     float _min,_max;
-
+     
     v0 = triangle.a.position - center;
     v1 = triangle.b.position - center;
     v2 = triangle.c.position - center;
@@ -285,6 +289,63 @@ class Intersection {
       return 1; 
     }
     return 0;
+  }
+
+  static bool intersectRayAABox2(const glm::vec3& origin, const glm::vec3& direction, const glm::vec3& center, const glm::vec3& halfsize, int& tnear, int& tfar)
+  {
+    glm::vec3 T_1, T_2, min, max; // vectors to hold the T-values for every direction
+    min = center - halfsize;
+    max = center + halfsize;
+    double t_near = -DBL_MAX; // maximums defined in float.h
+    double t_far = DBL_MAX;
+   
+    for (int i = 0; i < 3; i++){ //we test slabs in every direction
+      if (direction[i] == 0){ // ray parallel to planes in this direction
+        if ((origin[i] < min[i]) || (origin[i] > max[i])) {
+          return false; // parallel AND outside box : no intersection possible
+        }
+      } else { // ray not parallel to planes in this direction
+        T_1[i] = (min[i] - origin[i]) / direction[i];
+        T_2[i] = (max[i] - origin[i]) / direction[i];
+
+        if(T_1[i] > T_2[i]){ // we want T_1 to hold values for intersection with near plane
+          std::swap(T_1,T_2);
+        }
+        if (T_1[i] > t_near){
+          t_near = T_1[i];
+        }
+        if (T_2[i] < t_far){
+          t_far = T_2[i];
+        }
+        if( (t_near > t_far) || (t_far < 0) ){
+          return false;
+        }
+      }
+    }
+    tnear = t_near; tfar = t_far; // put return values in place
+    return true; // if we made it here, there was an intersection - YAY
+  }
+
+  static void intersectRayOctree2(const Octree& octree, const glm::vec3& origin, const glm::vec3& direction, std::set<Triangle*> *result) {
+    std::stack<OctreeNode*> node_stack;
+    node_stack.push(&octree.root());
+    OctreeNode* current;
+    int near = 0, far = 0;
+    while(!node_stack.empty()) {
+      current = node_stack.top();
+      node_stack.pop();
+      if(intersectRayAABox2(origin, direction, current->center(), current->halfsize(), near, far)) {
+        if(current->leaf()) {
+          for(auto triangle : current->triangles()) {
+            result->insert(triangle);
+          }
+        } else {
+          for( auto child : current->children()) {
+            node_stack.push(child);
+          }
+        }
+      }
+    }
   }
 
 };
