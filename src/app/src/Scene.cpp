@@ -4,7 +4,7 @@
 #include "geometry/geometry.h"
 
 Scene::Scene() {
-  _octree = new Octree(800);
+  _octree = new Octree(16);
 }
 
 void Scene::addMesh(Mesh* mesh) {
@@ -38,7 +38,7 @@ int Scene::intersection(const glm::vec3& origin, const glm::vec3& direction, flo
   std::set<Triangle*> possible_intersections;
   int result = 0;
 
-  Intersection::intersectRayOctree(*_octree, origin, direction, &possible_intersections);
+  Intersection::intersectRayOctree2(*_octree, origin, direction, &possible_intersections);
   for(auto triangle : possible_intersections) {
     tmp_n = glm::normalize(triangle->a.normal + triangle->b.normal + triangle->c.normal);
     int intersection = Intersection::intersectTriangle(*triangle, origin, direction, &tmp);
