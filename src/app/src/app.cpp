@@ -233,10 +233,10 @@ void loadScene(const aiScene* aiScene) {
     aiColor4D diffuse;
 
     //if(Material::materials[index] == NULL) {
-    // Material *mat = new Material(index);
-    // mtl->Get(AI_MATKEY_SHININESS, mat->shininess);
-    // mtl->Get(AI_MATKEY_REFRACTI, mat->refraction_index);
-      //mtl->Get()
+     Material *mat = new Material(index);
+     mtl->Get(AI_MATKEY_SHININESS, mat->shininess);
+     mtl->Get(AI_MATKEY_REFRACTI, mat->refraction_index);
+     mtl->Get(AI_MATKEY_COLOR_DIFFUSE, mat->diffuse);
       //}
     
     if(aiGetMaterialColor(mtl, AI_MATKEY_COLOR_DIFFUSE, &diffuse) == AI_SUCCESS) {

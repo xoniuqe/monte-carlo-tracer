@@ -38,6 +38,7 @@ void MonteCarloPathtracer::startPathtracing() {
       glm::vec3 pp = mCamera->mP0 + deltaX * ((float) x + 0.5f) + deltaY * ((float) y + 0.5f);
       glm::vec3 direction = glm::vec3(pp) - mCamera->mOrigin;//(tx,ty,-1.f);
       direction = glm::normalize(direction);
+      
       mImage[x + (mScreenWidth * y)] = (glm::u8vec3) (traceRay(mCamera->mOrigin, direction, 0) * 255.f);
         });
     });

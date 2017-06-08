@@ -14,6 +14,7 @@ add_executable(app
   src/geometry/OctreeNode.h
   src/geometry/OctreeNode.cpp
   src/util/Material.h
+  src/util/Material.cpp
   src/util/Mesh.h
   src/util/Mesh.cpp
   src/util/Light.h

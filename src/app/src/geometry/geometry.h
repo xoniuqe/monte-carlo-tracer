@@ -35,6 +35,7 @@ struct Triangle {
 
 class Intersection {
  private:
+
   static bool axis_test_x(const glm::vec3& eX, const glm::vec3& vA, const glm::vec3& vB, const glm::vec3& halfsize) {
     float pA = eX.z * vA.y - eX.y * vA.z;
     float pB = eX.z * vB.y - eX.y * vB.z;
@@ -347,6 +348,10 @@ class Intersection {
       }
     }
   }
+
+  static void bla() {
+    
+  };
 
 };
 #endif
