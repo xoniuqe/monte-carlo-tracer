@@ -9,6 +9,8 @@ add_executable(app
   src/MonteCarloPathtracer.h
   src/MonteCarloPathtracer.cpp
   src/geometry/geometry.h
+  src/geometry/Intersection.h
+  src/geometry/Intersection.cpp
   src/geometry/Octree.h
   src/geometry/Octree.cpp
   src/geometry/OctreeNode.h

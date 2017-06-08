@@ -2,6 +2,7 @@
 #include <iostream>
 #include <glm/gtc/constants.hpp>
 #include "geometry/geometry.h"
+#include "geometry/Intersection.h"
 
 Scene::Scene() {
   _octree = new Octree(16);
@@ -10,6 +11,7 @@ Scene::Scene() {
 void Scene::addMesh(Mesh* mesh) {
   mMeshes.push_back(mesh);
   for(auto triangle : mesh->triangles()) {
+      triangle->mesh = mesh;
     _octree->insert(triangle);
   }
 }
@@ -38,7 +40,7 @@ int Scene::intersection(const glm::vec3& origin, const glm::vec3& direction, flo
   std::set<Triangle*> possible_intersections;
   int result = 0;
 
-  Intersection::intersectRayOctree2(*_octree, origin, direction, &possible_intersections);
+  Intersection::intersectRayOctree(*_octree, origin, direction, &possible_intersections);
   for(auto triangle : possible_intersections) {
     tmp_n = glm::normalize(triangle->a.normal + triangle->b.normal + triangle->c.normal);
     int intersection = Intersection::intersectTriangle(*triangle, origin, direction, &tmp);
@@ -48,6 +50,7 @@ int Scene::intersection(const glm::vec3& origin, const glm::vec3& direction, flo
       result = 1;
       res = Intersection::barycentricInterpolation(*triangle, origin + direction * tmp);
       res.normal = tmp_n;
+      out_mesh = triangle->mesh;
     }
   }
   res.position = origin + direction * best;

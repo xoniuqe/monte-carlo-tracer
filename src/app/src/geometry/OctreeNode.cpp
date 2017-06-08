@@ -1,5 +1,6 @@
 #include "OctreeNode.h"
 #include "geometry.h"
+#include "Intersection.h"
 
 #include <iostream>
 

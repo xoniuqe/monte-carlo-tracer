@@ -61,7 +61,7 @@ std::vector<Triangle*> Mesh::triangles() const {
     Vertex b = mVertices.at(mIndices.at(i+1));
     Vertex c = mVertices.at(mIndices.at(i+2));
     Triangle* triangle = new Triangle();
-    triangle->mesh = this;
+    //triangle->mesh = this;
     triangle->a = a;
     triangle->b = b;
     triangle->c = c;

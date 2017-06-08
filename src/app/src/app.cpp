@@ -52,8 +52,8 @@ MonteCarloPathtracer* mcp;
 int renderMode = 1;
 int WIDTH = 800;
 int HEIGHT = 600;
-int renderScreenWidth = 800;
-int renderScreenHeight = 600;
+int renderScreenWidth = 300;
+int renderScreenHeight = 200;
 ArcBall* arcBall;
 
 OctreeNode* test;

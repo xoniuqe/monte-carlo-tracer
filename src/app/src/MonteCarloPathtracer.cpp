@@ -51,37 +51,40 @@ glm::vec3 MonteCarloPathtracer::traceRay(const glm::vec3& origin, const glm::vec
   float t = 0.0f;
   glm::vec3 indirectColor(0,0,0);
   glm::vec3 directColor(0,0,0);
+  glm::vec3 test(0,0,0);
   if(mScene->intersection(origin, direction, &t, &vert, collider)) {
-    for(auto light : mScene->mLights) {
-      glm::vec3 lDirection = light->getLightDirection(vert.position);
-      float dist = glm::length(lDirection);
-      lDirection = glm::normalize(lDirection);
-      int intersects = mScene->intersection(vert.position, lDirection, &t, &v, collider);//&n, collider);
-      if(!intersects || (intersects &&  dist - t <= glm::zero<float>())) {
-        dist = (light->power - (dist * dist)) / light->power;
-        dist = 1.f;
-        if(dist > glm::zero<float>()){
-          directColor += light->color * std::max(0.f, glm::dot(lDirection, vert.normal)) * dist;// * light->power;
-        }
-      }else if(dist - t > glm::zero<float>()) {
-        //std::cout << "dist: " << dist << " t: " << t << "\n";
+      //collider material checken und entsprechend verfahren
+      if(depth < 3)
+          test = traceRay(vert.position, glm::reflect(direction, vert.normal), depth + 1);
+      for(auto light : mScene->mLights) {
+          glm::vec3 lDirection = light->getLightDirection(vert.position);
+          float dist = glm::length(lDirection);
+          lDirection = glm::normalize(lDirection);
+          int intersects = mScene->intersection(vert.position, lDirection, &t, &v, collider);//&n, collider);
+          if(!intersects || (intersects &&  dist - t <= glm::zero<float>())) {
+              dist = (light->power - (dist * dist)) / light->power;
+              dist = 1.f;
+              if(dist > glm::zero<float>()){
+                  directColor += light->color * std::max(0.f, glm::dot(lDirection, vert.normal)) * dist;// * light->power;
+              }
+          }else if(dist - t > glm::zero<float>()) {
+              //std::cout << "dist: " << dist << " t: " << t << "\n";
+          }
       }
-    }
- 
-    if(depth < 1) { // { // 8 ) {}
-      //TODO russian roulette
-      for(auto i = 0; i < mNumSamples; i++) {
-        glm::vec3 direction = randomDirection(n);
-        indirectColor += traceRay(vert.position, direction, depth +1) * std::max(0.f, glm::dot(direction, vert.normal));
-        /*int intersects = mScene->intersection(mCamera->mOrigin, direction, &t, &v, collider);//&n, collider);
-        if(intersects){
-          p = mCamera->mOrigin + direction * t;
-          indirectColor += (glm::vec3)traceRay(p, v, depth +1) *  std::max(0.f, glm::dot(direction, vert.normal)) *glm::one_over_two_pi<float>();//n, depth +1);
-          }*/
+      
+      if(depth < 2) { // { // 8 ) {}
+          //TODO russian roulette
+          for(auto i = 0; i < mNumSamples; i++) {
+              glm::vec3 direction = randomDirection(n);
+              indirectColor += traceRay(vert.position, direction, depth +1) * std::max(0.f, glm::dot(direction, vert.normal));
+          }
+          indirectColor *= 1.f / mNumSamples;
       }
-      indirectColor *= 1.f / mNumSamples;
-    }
-    return (directColor + indirectColor) * vert.color;// * glm::one_over_pi<float>()));// + vert.color;// / 2;//(1.f /(float) mNumSamples);
+      float a = 1;
+      if(glm::length(test) > glm::zero<float>()) {
+          a = 0.5f;
+      }
+      return (directColor + indirectColor) * vert.color * a + test * (1.f -a);// * glm::one_over_pi<float>()));// + vert.color;// / 2;//(1.f /(float) mNumSamples);
   }
   return directColor;
 }
