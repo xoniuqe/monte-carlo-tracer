@@ -52,8 +52,8 @@ MonteCarloPathtracer* mcp;
 int renderMode = 1;
 int WIDTH = 800;
 int HEIGHT = 600;
-int renderScreenWidth = 300;
-int renderScreenHeight = 200;
+int renderScreenWidth = 400;
+int renderScreenHeight = 300;
 ArcBall* arcBall;
 
 OctreeNode* test;
@@ -75,7 +75,7 @@ int main(int argc, char * argv[]) {
 
   glUseProgram(0);
   
-  camera = new Camera(glm::vec3(0,0,-1), glm::vec3(0,0,0), 90.f, 4.f / 3.f, WIDTH, HEIGHT);
+  camera = new Camera(glm::vec3(0,0,-2), glm::vec3(0,0,0), 45.f, 4.f / 3.f, WIDTH, HEIGHT);
   Model = glm::mat4(1.f);
 
   float radius = sqrtf(float(WIDTH * WIDTH + HEIGHT * HEIGHT)) * 0.5f;
@@ -90,7 +90,7 @@ int main(int argc, char * argv[]) {
 
   AreaLight* light = new AreaLight(LightPosition, 0.2f, 0.2f);
   light->color = glm::vec3(1.f,1.f,1.f);
-  light->power = 50.f;
+  light->power = 1.f;
   scene->addLight(light);
 
 
@@ -110,7 +110,7 @@ int main(int argc, char * argv[]) {
   }
   test->subdivide();*/
   scene->calculateOctree();
-  mcp = new MonteCarloPathtracer(scene, camera, renderScreenWidth, renderScreenHeight, 8);
+  mcp = new MonteCarloPathtracer(scene, camera, renderScreenWidth, renderScreenHeight, 16);
   while(!quit) {
     input();
     display(); 
@@ -223,69 +223,86 @@ void input() {
     }
   }
 }
-
+bool reflect = false;
+int refract = 0;
 void loadScene(const aiScene* aiScene) {
-
-  std::vector<glm::vec3> colors;
-  for(auto i = 0; i < aiScene->mNumMeshes; i++) {
-    int index = aiScene->mMeshes[i]->mMaterialIndex;
-    aiMaterial *mtl = aiScene->mMaterials[index];
-    aiColor4D diffuse;
-
-    //if(Material::materials[index] == NULL) {
-     Material *mat = new Material(index);
-     mtl->Get(AI_MATKEY_SHININESS, mat->shininess);
-     mtl->Get(AI_MATKEY_REFRACTI, mat->refraction_index);
-     mtl->Get(AI_MATKEY_COLOR_DIFFUSE, mat->diffuse);
-      //}
+    std::map<int, int> material_mapping = {};
+    std::vector<glm::vec3> colors;
+    for(auto i = 0; i < aiScene->mNumMeshes; i++) {
+        int index = aiScene->mMeshes[i]->mMaterialIndex;
+        aiMaterial *mtl = aiScene->mMaterials[index];
+        aiColor4D diffuse;
+        
+        //if(Material::materials[index] == NULL) {
+        Material *mat = Material::new_material();
+        material_mapping[index] = mat->index;
+        //mtl->Get(AI_MATKEY_SHININESS, mat->shininess);
+        mat->shininess = 0.5f;
+        mtl->Get(AI_MATKEY_REFRACTI, mat->refraction_index);
+        mtl->Get(AI_MATKEY_COLOR_DIFFUSE, diffuse);
+        mat->diffuse = glm::vec3(diffuse.r, diffuse.g, diffuse.b);
+        /*if(reflect) {
+            mat->reflectivity = 0.8f;
+            reflect = false;
+        } else
+            reflect = true;
+        */
+        if(refract == 0) {
+            mat->refraction_index = 5.f;
+        }
+        refract++;
+        //std::cout << mat->reflectivity << std::endl;
+        
+        if(aiGetMaterialColor(mtl, AI_MATKEY_COLOR_DIFFUSE, &diffuse) == AI_SUCCESS) {
+            glm::vec3 color(diffuse.r, diffuse.g, diffuse.b);
+            colors.push_back(color);
+        }
+    }
+    for(auto i = 0; i < aiScene->mNumMeshes; i++) {
+        
+        int index = aiScene->mMeshes[i]->mMaterialIndex;
+        std::vector<Vertex> vertices;
+        std::vector<GLuint> indices;
+        
+        aiMesh* mesh = aiScene->mMeshes[i];
+        //std::cout << "num verts: " <<  mesh->mNumVertices << std::endl;
+        for(unsigned int j = 0; j < mesh->mNumVertices; j++) {
+            //glm::vec3 vert, norm;
+            Vertex vert;
+            
+            vert.position.x = mesh->mVertices[j].x;
+            vert.position.y = mesh->mVertices[j].y;
+            vert.position.z = mesh->mVertices[j].z;
+            
+            vert.normal.x = mesh->mNormals[j].x;
+            vert.normal.y = mesh->mNormals[j].y;
+            vert.normal.z = mesh->mNormals[j].z;
+            
+            vert.color = colors[i];
+            vertices.push_back(vert);
+            
+        }
+        for(unsigned int j = 0; j < mesh->mNumFaces; j++) {
+            aiFace face = mesh->mFaces[j];
+            Triangle* tmpTriangle = new Triangle();
+            tmpTriangle->a = vertices.at(face.mIndices[0]);
+            tmpTriangle->b = vertices.at(face.mIndices[1]);
+            tmpTriangle->c = vertices.at(face.mIndices[2]);
+            testTriangles.push_back(tmpTriangle);
+            for(unsigned int k = 0; k < face.mNumIndices; k++) {
+                indices.push_back(face.mIndices[k]);
+            }
+        }
+        std::cout << "added mesh\n";
+        auto _mesh = new Mesh(std::move(vertices), std::move(indices));
+        _mesh->material(material_mapping[index]);
+        scene->addMesh(_mesh);
+    }
     
-    if(aiGetMaterialColor(mtl, AI_MATKEY_COLOR_DIFFUSE, &diffuse) == AI_SUCCESS) {
-      glm::vec3 color(diffuse.r, diffuse.g, diffuse.b);
-      colors.push_back(color);
-    }
-  }
-  for(auto i = 0; i < aiScene->mNumMeshes; i++) {
-
-    std::vector<Vertex> vertices;
-    std::vector<GLuint> indices;
-
-    aiMesh* mesh = aiScene->mMeshes[i];
-    //std::cout << "num verts: " <<  mesh->mNumVertices << std::endl;
-    for(unsigned int j = 0; j < mesh->mNumVertices; j++) {
-      //glm::vec3 vert, norm;
-      Vertex vert;
-
-      vert.position.x = mesh->mVertices[j].x;
-      vert.position.y = mesh->mVertices[j].y;
-      vert.position.z = mesh->mVertices[j].z;
-
-      vert.normal.x = mesh->mNormals[j].x;
-      vert.normal.y = mesh->mNormals[j].y;
-      vert.normal.z = mesh->mNormals[j].z;
-
-      vert.color = colors[i];
-      vertices.push_back(vert);
-
-    }
-    for(unsigned int j = 0; j < mesh->mNumFaces; j++) {
-      aiFace face = mesh->mFaces[j];
-      Triangle* tmpTriangle = new Triangle();
-      tmpTriangle->a = vertices.at(face.mIndices[0]);
-      tmpTriangle->b = vertices.at(face.mIndices[1]);
-      tmpTriangle->c = vertices.at(face.mIndices[2]);
-      testTriangles.push_back(tmpTriangle);
-      for(unsigned int k = 0; k < face.mNumIndices; k++) {
-        indices.push_back(face.mIndices[k]);
-      }
-    }
-    std::cout << "added mesh\n";
-    scene->addMesh(new Mesh(std::move(vertices), std::move(indices)));
-  }
-
 }
 
 int setupWindow(int width, int height) {
-	// SDL mit dem Grafiksystem initialisieren.
+    // SDL mit dem Grafiksystem initialisieren.
   if(SDL_Init(SDL_INIT_VIDEO) == -1)
     {
       std::cerr << "Konnte SDL nicht initialisieren! Fehler: " << SDL_GetError() << std::endl;

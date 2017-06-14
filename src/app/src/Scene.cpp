@@ -12,7 +12,7 @@ void Scene::addMesh(Mesh* mesh) {
   mMeshes.push_back(mesh);
   for(auto triangle : mesh->triangles()) {
       triangle->mesh = mesh;
-    _octree->insert(triangle);
+      _octree->insert(triangle);
   }
 }
 
@@ -32,11 +32,12 @@ void Scene::calculateOctree() {
 }
 
 
-int Scene::intersection(const glm::vec3& origin, const glm::vec3& direction, float* out_t, Vertex* out, Mesh* out_mesh) const {
+int Scene::intersection(const glm::vec3& origin, const glm::vec3& direction, float* out_t, Vertex* out, Mesh*& out_mesh) const {
   float best = glm::zero<float>();
   glm::vec3 n, tmp_n;
   float tmp = 0.0;
   Vertex res, tmp_res;
+  Mesh* mesh_res = NULL;
   std::set<Triangle*> possible_intersections;
   int result = 0;
 
@@ -50,12 +51,13 @@ int Scene::intersection(const glm::vec3& origin, const glm::vec3& direction, flo
       result = 1;
       res = Intersection::barycentricInterpolation(*triangle, origin + direction * tmp);
       res.normal = tmp_n;
-      out_mesh = triangle->mesh;
+      mesh_res = triangle->mesh;
     }
   }
   res.position = origin + direction * best;
   *out = res;
   *out_t = best;
+  out_mesh = mesh_res;
   //outmesh noch setzen
   return result;
 }

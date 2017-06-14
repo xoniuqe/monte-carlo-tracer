@@ -6,7 +6,7 @@
 #include <vector>
 #define EPSILON 0.00000001f
 
-#include "Material.h"
+//#include "Material.h"
 #include "../geometry/geometry.h"
 
 class Scene;
@@ -18,9 +18,10 @@ class Mesh {
   int intersect(const glm::vec3& origin, const glm::vec3& direction, float* out_t, Vertex* out);//glm::vec3* out_n);
   std::vector<Triangle*> triangles() const;
   void render();
-  Material& material() const;
+  int material() const;
+  void material(int material);
  private:
-  Material* _material;
+  int _material;
   static Vertex barcentricInterpolation(const Vertex& a, const Vertex&b, const Vertex& c, const glm::vec3& p);
   static int intersectTriangle(const glm::vec3& a, const glm::vec3& b, const glm::vec3& c, const glm::vec3& origin, const glm::vec3& direction, float* out);
   glm::vec3 mCenter;

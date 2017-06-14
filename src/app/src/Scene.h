@@ -15,7 +15,7 @@ class Scene {
   void addMesh(Mesh* mesh);
   void addLight(Light* light);
   void calculateOctree();
-  int intersection(const glm::vec3& origin, const glm::vec3& diretion, float* out_t, Vertex* out, Mesh* out_mesh) const;
+  int intersection(const glm::vec3& origin, const glm::vec3& diretion, float* out_t, Vertex* out, Mesh*& out_mesh) const;
   std::vector<Light*> mLights;
  private:
   Octree* _octree;

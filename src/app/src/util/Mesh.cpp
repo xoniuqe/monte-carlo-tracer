@@ -8,6 +8,7 @@
 Mesh::Mesh(const std::vector<Vertex>& verts, const std::vector<GLuint>& indices) {
   mVertices = verts;
   mIndices = indices;
+  _material = 0;
 
 
   glGenVertexArrays(1, &mVertexArrayId);
@@ -42,8 +43,12 @@ Mesh::~Mesh() {
   glDeleteVertexArrays(1, &mVertexArrayId); 
 }
 
-Material& Mesh::material() const {
-  return *_material;
+int Mesh::material() const {
+  return _material;
+}
+
+void Mesh::material(int material) {
+    _material = material;
 }
 
 void Mesh::render() {
