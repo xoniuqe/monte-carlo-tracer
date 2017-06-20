@@ -110,7 +110,7 @@ int main(int argc, char * argv[]) {
     
     glUseProgram(0);
     
-    _camera = new Camera(glm::vec3(0,0,-2), glm::vec3(0,0,0), 45.f, 4.f / 3.f, _width, _height);
+    _camera = new Camera(glm::vec3(0,0,-2), glm::vec3(0,0,0), 45.f, 4.f / 3.f);
     _model = glm::mat4(1.f);
     
     float radius = sqrtf(float(_width * _width + _height * _height)) * 0.5f;
