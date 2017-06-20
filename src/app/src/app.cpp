@@ -61,6 +61,7 @@ int _num_samples = 8;
 int _antialiasing = 0;
 ArcBall* _arcball; 
 bool _is_tracing = false;
+glm::vec3 _mouse_position;
 
 namespace po = boost::program_options;
 
@@ -102,7 +103,7 @@ int main(int argc, char * argv[]) {
     
     _program_id = LoadShaders("../shader/vert.glsl", "../shader/frag.glsl");
     glUseProgram(_program_id);
-    _matrix_id = glGetUniformLocation(_program_id, "_mvp");
+    _matrix_id = glGetUniformLocation(_program_id, "MVP");
     _loc_m = glGetUniformLocation(_program_id, "V");
     _loc_v= glGetUniformLocation(_program_id, "M");
     _loc_light= glGetUniformLocation(_program_id, "lightPosition");
@@ -133,16 +134,16 @@ int main(int argc, char * argv[]) {
     } else {
         std::cerr << std::string(importer.GetErrorString()) << std::endl;
     }
-    /*const aiScene* ai_scene2 = importer.ReadFile("../data/test.obj", aiProcess_Triangulate | aiProcess_GenNormals);
+    const aiScene* ai_scene2 = importer.ReadFile("../data/test.obj", aiProcess_Triangulate | aiProcess_GenNormals);
     if(ai_scene2) {
-        loadScene(ai_scene2);
-        }*/
+        //   loadScene(ai_scene2);
+    }
     
     
     setupScreenTexture();
     
     _scene->calculateOctree();
-    _monte_carlo_pathtracer = new MonteCarloPathtracer(scene, _camera, _render_screen_width, _render_screen_height, _num_samples, _max_recursion, _antialiasing);
+    _monte_carlo_pathtracer = new MonteCarloPathtracer(_scene, _camera, _render_screen_width, _render_screen_height, _num_samples, _max_recursion, _antialiasing);
     while(!_quit) {
         input();
         display(); 
@@ -198,7 +199,7 @@ void renderScene() {
     glUniform3f(_loc_light, _light_position.x, _light_position.y, _light_position.z);
     glUniformMatrix4fv(_loc_m, 1, GL_FALSE, &_model[0][0]);
     glUniformMatrix4fv(_loc_v, 1, GL_FALSE, &_camera->_view[0][0]);
-    scene->render();
+    _scene->render();
     glUseProgram(0);
 }
 
@@ -217,8 +218,6 @@ void display() {
     SDL_GL_SwapWindow(_window);
 }
 
-bool _is_tracing = false;
-glm::vec3 _mouse_position;
 void input() {
     int x,y;
     SDL_GetMouseState(&x, &y);
@@ -231,7 +230,7 @@ void input() {
     if(event.type == SDL_QUIT){
         _quit = true;
     }
-    if(event.button.button == SDL_BUTTON_LEFT) {//type == SDL_MOUSEBUTTONDOWN) {
+    /* if(event.button.button == SDL_BUTTON_LEFT) {//type == SDL_MOUSEBUTTONDOWN) {
         int x,y;
         _arcball->setMouse(_mouse_position);
         if(event.type == SDL_MOUSEBUTTONDOWN) {
@@ -247,7 +246,7 @@ void input() {
         
         _camera->_view = glm::lookAt(_camera->_origin, _camera->_center, _camera->_up);
         _mvp = _camera->_projection * _camera->_view * _model;
-    }
+        }*/
     if(event.type == SDL_KEYUP) {
         if(event.key.keysym.sym == SDLK_1){
             _render_mode += 1;

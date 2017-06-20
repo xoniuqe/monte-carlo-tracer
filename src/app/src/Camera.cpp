@@ -39,8 +39,8 @@ glm::mat4 Camera::getRotationMatrix() const {
 }
 
 void Camera::calculateScreenToWorld() {
-  glm::mat4 inverseProjection= glm::inverse(_projection);
-  glm::mat4 inverseView = glm::inverse(_view);// * mRotation;
+  glm::mat4 inverse_projection= glm::inverse(_projection);
+  glm::mat4 inverse_view = glm::inverse(_view);// * mRotation;
   //float invWidth = 1.f / (float) _width; 
   //float invHeight = 1.f / (float) _height; 
   glm::vec4 a(-1,-1,-1,1);
@@ -48,18 +48,18 @@ void Camera::calculateScreenToWorld() {
   glm::vec4 c(1,1,-1,1);
   glm::vec4 d(-1,1,-1,1);
   glm::vec4 p0,p1,p2,p3,px,py;
-  p0 = inverseProjection * a;
-  p1 = inverseProjection * b;
-  p2 = inverseProjection * c;
-  p3 = inverseProjection * d;
+  p0 = inverse_projection * a;
+  p1 = inverse_projection * b;
+  p2 = inverse_projection * c;
+  p3 = inverse_projection * d;
   p0 = p0 / p0.w;
   p1 = p1 / p1.w;
   p2 = p2 / p2.w;
   p3 = p3 / p3.w;
-  p0 = inverseView * p0;
-  p1 = inverseView * p1;
-  p2 = inverseView * p2;
-  p3 = inverseView * p3;
+  p0 = inverse_view * p0;
+  p1 = inverse_view * p1;
+  p2 = inverse_view * p2;
+  p3 = inverse_view * p3;
   _dx = p1 - p0;
   _dx = p3 - p0;
   //mDeltaX *= invWidth;
