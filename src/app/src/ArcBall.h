@@ -11,13 +11,13 @@ class ArcBall {
   glm::mat4 getRotationMatrix();
   void beginDragging();
   void endDragging();
-  void setMouse(const glm::vec3& mousePosition);
+  void setMouse(const glm::vec3& mouse_position);
   void place(const glm::vec3& center, float radius);
-  bool isDragging;
+  bool _is_dragging;
  private:
-  glm::vec3 vecCurrent, vecStart, center;
-  glm::quat quatCurrent, quatStart;
-  float radius;
+  glm::vec3 _vec_current, _vec_start, _center;
+  glm::quat _quat_current, _quat_start;
+  float _radius;
 
   glm::vec3 mapToSphere(const glm::vec3& pos);
   glm::quat calcQuaternion(const glm::vec3& from, const glm::vec3& to);

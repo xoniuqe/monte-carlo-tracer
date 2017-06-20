@@ -28,4 +28,5 @@ void main(void)
 
   float cosAlpha = clamp(dot(E,R),0.f,1.f);
   fragmentColor = color * lightColor * lightPower * cosTheta / (distance * distance) + vec3(0.3,0.3,0.3) * lightColor * lightPower * pow(cosAlpha,5.f) / (distance * distance);
+  //fragmentColor = vec3(1,0,1);
 }

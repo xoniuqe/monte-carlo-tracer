@@ -9,15 +9,14 @@ struct Triangle;
 
 class Octree {
  public:
-  Octree(int maxTrianglesPerNode);
+  Octree(int max_triangles);
+  ~Octree();
   void insert(Triangle* triangle);
   void subdivide();
   void render() const;
-  Triangle* intersectsRay(const glm::vec3& origin, const glm::vec3& dir, float* t_out);
   OctreeNode& root() const;
  private:
-  int mMaxTrianglesPerNode;
-  OctreeNode* mRoot;
-  //glm::vec3[] boundingBox;
+  int _max_triangles;
+  OctreeNode* _root;
 };
 #endif

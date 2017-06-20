@@ -8,18 +8,18 @@
 
 class MonteCarloPathtracer {
  public:
-  MonteCarloPathtracer(Scene* scene, Camera* camera, int screenWidth, int screenHeight, int numSamples=8);
+    MonteCarloPathtracer(Scene* scene, Camera* camera, int screen_width, int screen_height, int num_samples=8, int max_depth=2, int aa=0);
   ~MonteCarloPathtracer();
   void startPathtracing();
-  glm::u8vec3* mImage;
+  glm::u8vec3* _image;
  private:
-  std::function<float()> mRandom;
-  int mNumSamples;
-  Scene* mScene;
-  Camera* mCamera;
-  int mScreenWidth, mScreenHeight;
-  int max_depth = 2;
-
+  std::function<float()> _random;
+  int _num_samples;
+  Scene* _scene;
+  Camera* _camera;
+  int _screen_width, _screen_height;
+  int _max_depth;
+  int _aa;
   glm::vec3 traceRay(const glm::vec3& origin, const glm::vec3& direction, const int depth);//const Vertex& vert, const int depth);//const glm::vec3& normal, const int depth);
   glm::vec3 randomDirection(const glm::vec3& n);
 };

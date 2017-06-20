@@ -10,7 +10,7 @@ class AreaLight : public Light {
   glm::vec3 getLightDirection(const glm::vec3& origin) const;
  private:
   float height, width;
-  std::function<float()> mRandom;
+  std::function<float()> _random;
 };
 
 #endif

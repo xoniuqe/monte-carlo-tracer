@@ -2,29 +2,30 @@
 
 #include "geometry.h"
 
-Octree::Octree(int maxTrianglesPerNode) {
-  mMaxTrianglesPerNode = maxTrianglesPerNode;
-  mRoot = new OctreeNode(maxTrianglesPerNode, glm::vec3(), glm::vec3());
+Octree::Octree(int max_triangles) {
+    _max_triangles = max_triangles;
+    _root = new OctreeNode(_max_triangles, glm::vec3(), glm::vec3());
+}
+
+Octree::~Octree() {
+    //for(auto triangle : mRoot->triangles()) {
+    //    delete triangle;
+    //}
+    delete _root;
 }
 
 void Octree::insert(Triangle* triangle) { 
-  mRoot->insert(triangle,true);
-  //mRoot->updateBoundingBox();
+  _root->insert(triangle,true);
 }
 
 void Octree::subdivide() {
-  mRoot->updateBoundingBox();
-  mRoot->subdivide();
+  _root->updateBoundingBox();
+  _root->subdivide();
+  _root->setVAO();
 }
 
 void Octree::render() const {
-  mRoot->render();
+  _root->render();
 }
 
-Triangle* Octree::intersectsRay(const glm::vec3& origin, const glm::vec3& dir, float* t_out) {
-  Triangle* result = NULL;
-  
-  return result;
-}
-
-OctreeNode& Octree::root() const { return *mRoot;}
+OctreeNode& Octree::root() const { return *_root;}

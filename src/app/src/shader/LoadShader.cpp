@@ -14,6 +14,7 @@ using namespace std;
 
 #include "LoadShader.h"
 
+//Kopiert von opengl-tutorials.org
 GLuint LoadShaders(const char* vertex_file_path, const char* fragment_file_path) {
   GLuint vertexSID = glCreateShader(GL_VERTEX_SHADER);
   GLuint fragmentSID = glCreateShader(GL_FRAGMENT_SHADER);

@@ -14,7 +14,7 @@ message(${CMAKE_MODULE_PATH})
 include(GNUInstallDirs)
 
 # Include Boost as an imported target
-find_package(Boost REQUIRED)
+find_package(Boost COMPONENTS program_options REQUIRED)
 add_library(boost INTERFACE IMPORTED)
 set_property(TARGET boost PROPERTY
     INTERFACE_INCLUDE_DIRECTORIES ${Boost_INCLUDE_DIR})

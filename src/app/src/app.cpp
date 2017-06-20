@@ -13,6 +13,9 @@
 
 #include<thread>
 
+#include <boost/config.hpp>
+#include <boost/program_options.hpp>
+
 #include "ArcBall.h"
 #include "Camera.h"
 #include "MonteCarloPathtracer.h"
@@ -29,199 +32,235 @@
 int setupWindow(int width, int height);
 void setupScreenTexture();
 void renderScene();
-
 void fillTexture();
 void renderTracerTexture();
 void display();
 void input();
 void loadScene(const aiScene* scene);
 
-SDL_Window* window;
-SDL_GLContext context;
-bool quit = false;
-Scene *scene;
+SDL_Window* _window;
+SDL_GLContext _context;
+bool _quit = false;
+Scene* _scene;
 
-std::thread renderThread;
+std::thread _render_thread;
 
-GLuint screenVBO, programId, tracerTexture;
-GLuint matrixId, locM, locV, locLight;
-glm::mat4 MVP, Model;
-glm::vec3 LightPosition;
-Camera* camera;
-MonteCarloPathtracer* mcp;
-int renderMode = 1;
-int WIDTH = 800;
-int HEIGHT = 600;
-int renderScreenWidth = 400;
-int renderScreenHeight = 300;
-ArcBall* arcBall;
+GLuint _screen_vbo, _program_id, _tracer_texture;
+GLuint _matrix_id, _loc_m, _loc_v, _loc_light;
+glm::mat4 _mvp, _model;
+glm::vec3 _light_position;
+Camera* _camera;
+MonteCarloPathtracer* _monte_carlo_pathtracer;
+int _render_mode = 1;
+int _width = 800;
+int _height = 600;
+int _render_screen_width = 200;
+int _render_screen_height = 150;
+int _max_recursion = 3;
+int _num_samples = 8;
+int _antialiasing = 0;
+ArcBall* _arcball; 
+bool _is_tracing = false;
 
-OctreeNode* test;
-std::vector<Triangle*> testTriangles;
+namespace po = boost::program_options;
 
 int main(int argc, char * argv[]) {
-  if(setupWindow(WIDTH,HEIGHT)){
-    return 1;
-  }
-  glewInit();
 
-  
-  programId = LoadShaders("../shader/vert.glsl", "../shader/frag.glsl");
-  glUseProgram(programId);
-  matrixId = glGetUniformLocation(programId, "MVP");
-  locM = glGetUniformLocation(programId, "V");
-  locV= glGetUniformLocation(programId, "M");
-  locLight= glGetUniformLocation(programId, "lightPosition");
+    po::options_description desc("Raytracer Options");
+    desc.add_options()
+        ("width", po::value<int>()->default_value(800), "Screen width")
+        ("height", po::value<int>()->default_value(600), "Screen height")
+        ("r-width", po::value<int>()->default_value(400), "Render texture width")
+        ("r-height", po::value<int>()->default_value(300), "Render texture height")
+        ("max-rec", po::value<int>()->default_value(3), "Maximum recursion depth")
+        ("samples", po::value<int>()->default_value(8), "Number of samples")
+        ("aa", po::value<int>()->default_value(0), "Antiliasing level");
+    po::variables_map vm;
+    try {
+        po::store(po::parse_command_line(argc, argv, desc), vm);
+        po::notify(vm);
+        _height = vm["height"].as<int>();
+        _width = vm["width"].as<int>();
+        _render_screen_height = vm["r-height"].as<int>();
+        _render_screen_width = vm["r-width"].as<int>();
+        _max_recursion = vm["max-rec"].as<int>();
+        _num_samples = vm["samples"].as<int>();
+        _antialiasing = vm["aa"].as<int>();
+        std::cout << _height << " " << _width << " " << _antialiasing << "\n";
+    }
+    catch (po::error& e) {
+        std::cerr << "ERROR: " << e.what() << std::endl << std::endl; 
+        std::cerr << desc << std::endl;
+        return 1;
+    }
+    std::cout << _height << " " << _width << " " << _antialiasing << "\n";
+    if(setupWindow(_width,_height)){
+        return 1;
+    }
+    glewInit();
+    
+    
+    _program_id = LoadShaders("../shader/vert.glsl", "../shader/frag.glsl");
+    glUseProgram(_program_id);
+    _matrix_id = glGetUniformLocation(_program_id, "_mvp");
+    _loc_m = glGetUniformLocation(_program_id, "V");
+    _loc_v= glGetUniformLocation(_program_id, "M");
+    _loc_light= glGetUniformLocation(_program_id, "lightPosition");
+    
+    glUseProgram(0);
+    
+    _camera = new Camera(glm::vec3(0,0,-2), glm::vec3(0,0,0), 45.f, 4.f / 3.f, _width, _height);
+    _model = glm::mat4(1.f);
+    
+    float radius = sqrtf(float(_width * _width + _height * _height)) * 0.5f;
+    _arcball = new ArcBall();
+    _arcball->place(glm::vec3(0,0,0), 3.f);
 
-  glUseProgram(0);
-  
-  camera = new Camera(glm::vec3(0,0,-2), glm::vec3(0,0,0), 45.f, 4.f / 3.f, WIDTH, HEIGHT);
-  Model = glm::mat4(1.f);
-
-  float radius = sqrtf(float(WIDTH * WIDTH + HEIGHT * HEIGHT)) * 0.5f;
-  arcBall = new ArcBall();
-  arcBall->place(glm::vec3(0,0,0), 3.f);
-
-  MVP = camera->mProjection * camera->mView * Model;
-  
-  LightPosition = glm::vec3(-0.2f,0.9,-0.2f);
-
-  scene = new Scene();
-
-  AreaLight* light = new AreaLight(LightPosition, 0.2f, 0.2f);
-  light->color = glm::vec3(1.f,1.f,1.f);
-  light->power = 1.f;
-  scene->addLight(light);
-
-
-  Assimp::Importer importer;
-  const aiScene* aiScene = importer.ReadFile("../data/scene.obj", aiProcess_Triangulate | aiProcess_GenNormals);
-  if(aiScene) {
-    loadScene(aiScene);
-  } else {
-    std::cerr << std::string(importer.GetErrorString()) << std::endl;
-   }
-
-  setupScreenTexture();
-  
-  /*test = new OctreeNode(12, glm::vec3(0,0,0), glm::vec3(1,1,1));//-1,-1,-1), glm::vec3(1,1,1));
-  for(auto triangle : testTriangles) {
-    test->insert(triangle);
-  }
-  test->subdivide();*/
-  scene->calculateOctree();
-  mcp = new MonteCarloPathtracer(scene, camera, renderScreenWidth, renderScreenHeight, 16);
-  while(!quit) {
-    input();
-    display(); 
-  }
-  
-  delete mcp;
-  SDL_GL_DeleteContext(context);
-  SDL_DestroyWindow(window);
-  SDL_Quit();
-	return 0;
+    _mvp = _camera->_projection * _camera->_view * _model;
+    
+    _light_position = glm::vec3(-0.2f,0.8f,-0.2f);
+    
+    _scene = new Scene();
+    
+    AreaLight* light = new AreaLight(_light_position, 0.2f, 0.2f);
+    light->color = glm::vec3(1.f,1.f,1.f);
+    light->power = 1.f;
+    _scene->addLight(light);
+    Assimp::Importer importer;
+    const aiScene* ai_scene1 = importer.ReadFile("../data/scene.obj", aiProcess_Triangulate | aiProcess_GenNormals);
+    if(ai_scene1) {
+        loadScene(ai_scene1);
+    } else {
+        std::cerr << std::string(importer.GetErrorString()) << std::endl;
+    }
+    /*const aiScene* ai_scene2 = importer.ReadFile("../data/test.obj", aiProcess_Triangulate | aiProcess_GenNormals);
+    if(ai_scene2) {
+        loadScene(ai_scene2);
+        }*/
+    
+    
+    setupScreenTexture();
+    
+    _scene->calculateOctree();
+    _monte_carlo_pathtracer = new MonteCarloPathtracer(scene, _camera, _render_screen_width, _render_screen_height, _num_samples, _max_recursion, _antialiasing);
+    while(!_quit) {
+        input();
+        display(); 
+    }
+    
+    delete _monte_carlo_pathtracer;
+    delete _camera;
+    delete _scene;
+    delete _arcball;
+    delete ai_scene1;
+    delete ai_scene2;
+    for(auto mat : Material::materials) {
+        delete mat.second;
+    }
+    SDL_GL_DeleteContext(_context);
+    SDL_DestroyWindow(_window);
+    SDL_Quit();
+    return 0;
 }
 float rotate = 0.f;
 void renderTracerTexture() {
-  glDisable(GL_DEPTH_TEST);
-  glDisable(GL_CULL_FACE);
-  glEnable(GL_TEXTURE_2D);
+    glDisable(GL_DEPTH_TEST);
+    glDisable(GL_CULL_FACE);
+    glEnable(GL_TEXTURE_2D);
 
-  glBindTexture(GL_TEXTURE_2D, tracerTexture);
-  fillTexture();
-  glEnable(GL_TEXTURE_2D); 
-  glUseProgram(0);
-  
-  glBegin(GL_QUADS);
-  glTexCoord2f(0.0f,0.0f);
-  glVertex3f(-1.0,-1.0, 0.0);
-  glTexCoord2f(1.0f,0.0f);
-  glVertex3f(1.0,-1.0,0.0);
-  glTexCoord2f(1.0f,1.0f);
-  glVertex3f(1.0,1.0,0.0);
-  glTexCoord2f(0.0f, 1.0f);
-  glVertex3f(-1.0, 1.0, 0.0);
-  glEnd();
-  glBindTexture(GL_TEXTURE_2D, 0);
+    glBindTexture(GL_TEXTURE_2D, _tracer_texture);
+    fillTexture();
+    glEnable(GL_TEXTURE_2D); 
+    glUseProgram(0);
+    
+    glBegin(GL_QUADS);
+    glTexCoord2f(0.0f,0.0f);
+    glVertex3f(-1.0,-1.0, 0.0);
+    glTexCoord2f(1.0f,0.0f);
+    glVertex3f(1.0,-1.0,0.0);
+    glTexCoord2f(1.0f,1.0f);
+    glVertex3f(1.0,1.0,0.0);
+    glTexCoord2f(0.0f, 1.0f);
+    glVertex3f(-1.0, 1.0, 0.0);
+    glEnd();
+    glBindTexture(GL_TEXTURE_2D, 0);
 }
 
 void renderScene() {
-  glEnable(GL_DEPTH_TEST);
-  glDepthFunc(GL_LESS);
-  glEnable(GL_CULL_FACE);
-  glCullFace(GL_BACK);
-  glDisable(GL_TEXTURE_2D);
-  glUseProgram(programId);
-  glUniformMatrix4fv(matrixId, 1 , GL_FALSE, &MVP[0][0]);
-
-  glUniform3f(locLight, LightPosition.x, LightPosition.y, LightPosition.z);
-  glUniformMatrix4fv(locM, 1, GL_FALSE, &Model[0][0]);
-  glUniformMatrix4fv(locV, 1, GL_FALSE, &camera->mView[0][0]);
-  scene->render();
-  //test->render();
-  glUseProgram(0);
+    glEnable(GL_DEPTH_TEST);
+    glDepthFunc(GL_LESS);
+    glEnable(GL_CULL_FACE);
+    glCullFace(GL_BACK);
+    glDisable(GL_TEXTURE_2D);
+    glUseProgram(_program_id);
+    glUniformMatrix4fv(_matrix_id, 1 , GL_FALSE, &_mvp[0][0]);
+    
+    glUniform3f(_loc_light, _light_position.x, _light_position.y, _light_position.z);
+    glUniformMatrix4fv(_loc_m, 1, GL_FALSE, &_model[0][0]);
+    glUniformMatrix4fv(_loc_v, 1, GL_FALSE, &_camera->_view[0][0]);
+    scene->render();
+    glUseProgram(0);
 }
 
 void display() {
-  glClearColor(0.0,0.0,1.0,1.0);
-  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-  switch(renderMode) {
-  case 0:
-    renderTracerTexture();
+    glClearColor(0.0,0.0,1.0,1.0);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    
+    switch(_render_mode) {
+    case 0:
+        renderTracerTexture();
     break;
-  case 1:
-    renderScene();
+    case 1:
+        renderScene();
     break;
-  }
-  SDL_GL_SwapWindow(window);
+    }
+    SDL_GL_SwapWindow(_window);
 }
 
-bool isTracing = false;
-glm::vec3 mousePosition;
+bool _is_tracing = false;
+glm::vec3 _mouse_position;
 void input() {
-  int x,y;
-  SDL_GetMouseState(&x, &y);
-  mousePosition.x = 2.f * ((float) x / WIDTH) -1.f;
-  mousePosition.y = 2.f * ((float) y / HEIGHT) - 1.f;
-  mousePosition.z = 0.f;
-  arcBall->setMouse(mousePosition);
-  SDL_Event event;
-  while(SDL_PollEvent(&event) != 0) {
+    int x,y;
+    SDL_GetMouseState(&x, &y);
+    _mouse_position.x = 2.f * ((float) x / _width) -1.f;
+    _mouse_position.y = 2.f * ((float) y / _height) - 1.f;
+    _mouse_position.z = 0.f;
+    _arcball->setMouse(_mouse_position);
+    SDL_Event event;
+    while(SDL_PollEvent(&event) != 0) {
     if(event.type == SDL_QUIT){
-      quit = true;
+        _quit = true;
     }
     if(event.button.button == SDL_BUTTON_LEFT) {//type == SDL_MOUSEBUTTONDOWN) {
-      int x,y;
-      arcBall->setMouse(mousePosition);
-      if(event.type == SDL_MOUSEBUTTONDOWN) {
-        std::cout << "left click!" << std::endl;
-        arcBall->beginDragging();
+        int x,y;
+        _arcball->setMouse(_mouse_position);
+        if(event.type == SDL_MOUSEBUTTONDOWN) {
+            std::cout << "left click!" << std::endl;
+            _arcball->beginDragging();
       }
-      else if(event.type == SDL_MOUSEBUTTONUP) {
+        else if(event.type == SDL_MOUSEBUTTONUP) {
         std::cout << "left release!" << std::endl;
-        arcBall->endDragging();
-      }
-      camera->mOrigin = glm::vec3(glm::inverse(arcBall->getRotationMatrix()) * glm::vec4(camera->mOrigin,1));
-      camera->mUp = glm::vec3(glm::inverse(arcBall->getRotationMatrix()) * glm::vec4(camera->mUp,0));
-      
-      camera->mView = glm::lookAt(camera->mOrigin, camera->mCenter, camera->mUp);
-      MVP = camera->mProjection * camera->mView * Model;
+        _arcball->endDragging();
+        }
+        _camera->_origin = glm::vec3(glm::inverse(_arcball->getRotationMatrix()) * glm::vec4(_camera->_origin,1));
+        _camera->_up = glm::vec3(glm::inverse(_arcball->getRotationMatrix()) * glm::vec4(_camera->_up,0));
+        
+        _camera->_view = glm::lookAt(_camera->_origin, _camera->_center, _camera->_up);
+        _mvp = _camera->_projection * _camera->_view * _model;
     }
     if(event.type == SDL_KEYUP) {
-      if(event.key.keysym.sym == SDLK_1){
-        renderMode += 1;
-        renderMode %= 2;
-      }
-      if(event.key.keysym.sym == SDLK_r) {        
-        if(!isTracing) {
-          renderThread = std::thread([=](){mcp->startPathtracing();});
-          isTracing = true;
+        if(event.key.keysym.sym == SDLK_1){
+            _render_mode += 1;
+            _render_mode %= 2;
         }
-      }
+        if(event.key.keysym.sym == SDLK_r) {        
+            if(!_is_tracing) {
+                _render_thread = std::thread([=](){_monte_carlo_pathtracer->startPathtracing();});
+                _is_tracing = true;
+            }
+        }
     }
-  }
+    }
 }
 bool reflect = false;
 int refract = 0;
@@ -284,11 +323,6 @@ void loadScene(const aiScene* aiScene) {
         }
         for(unsigned int j = 0; j < mesh->mNumFaces; j++) {
             aiFace face = mesh->mFaces[j];
-            Triangle* tmpTriangle = new Triangle();
-            tmpTriangle->a = vertices.at(face.mIndices[0]);
-            tmpTriangle->b = vertices.at(face.mIndices[1]);
-            tmpTriangle->c = vertices.at(face.mIndices[2]);
-            testTriangles.push_back(tmpTriangle);
             for(unsigned int k = 0; k < face.mNumIndices; k++) {
                 indices.push_back(face.mIndices[k]);
             }
@@ -296,7 +330,7 @@ void loadScene(const aiScene* aiScene) {
         std::cout << "added mesh\n";
         auto _mesh = new Mesh(std::move(vertices), std::move(indices));
         _mesh->material(material_mapping[index]);
-        scene->addMesh(_mesh);
+        _scene->addMesh(_mesh);
     }
     
 }
@@ -308,12 +342,12 @@ int setupWindow(int width, int height) {
       std::cerr << "Konnte SDL nicht initialisieren! Fehler: " << SDL_GetError() << std::endl;
       return 1;
     }
-  window = SDL_CreateWindow("Monte Carlo Raytracer", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, 800,600, SDL_WINDOW_OPENGL);
-	if(window == NULL) {
-		//std::cerr << "window is null! << SDl_GetError() << std::endl;
+  _window = SDL_CreateWindow("Monte Carlo Raytracer", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, width, height, SDL_WINDOW_OPENGL);
+	if(_window == NULL) {
+		//std::cerr << "_window is null! << SDl_GetError() << std::endl;
 		return 1;
 	}
-	context = SDL_GL_CreateContext(window);
+	_context = SDL_GL_CreateContext(_window);
 
   SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
 
@@ -327,8 +361,8 @@ int setupWindow(int width, int height) {
 }
 
 void setupScreenTexture() {
-  glGenTextures(1, &tracerTexture);
-  glBindTexture(GL_TEXTURE_2D, tracerTexture);
+  glGenTextures(1, &_tracer_texture);
+  glBindTexture(GL_TEXTURE_2D, _tracer_texture);
 
   glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
   glPixelStorei(GL_UNPACK_ROW_LENGTH, 0);
@@ -344,5 +378,5 @@ void setupScreenTexture() {
 }
 
  void fillTexture() {
-   glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB8, renderScreenWidth, renderScreenHeight, 0, GL_RGB, GL_UNSIGNED_BYTE, mcp->mImage);
+   glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB8, _render_screen_width, _render_screen_height, 0, GL_RGB, GL_UNSIGNED_BYTE, _monte_carlo_pathtracer->_image);
  }

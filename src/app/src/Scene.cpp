@@ -8,8 +8,18 @@ Scene::Scene() {
   _octree = new Octree(16);
 }
 
+Scene::~Scene() {
+    for(auto mesh : _meshes) {
+        delete mesh;
+    }
+    for(auto light : _lights) {
+        // delete light;
+    }
+    // delete _octree;
+}
+
 void Scene::addMesh(Mesh* mesh) {
-  mMeshes.push_back(mesh);
+  _meshes.push_back(mesh);
   for(auto triangle : mesh->triangles()) {
       triangle->mesh = mesh;
       _octree->insert(triangle);
@@ -17,11 +27,11 @@ void Scene::addMesh(Mesh* mesh) {
 }
 
 void Scene::addLight(Light* light) {
-  mLights.push_back(light);
+  _lights.push_back(light);
 }
 
 void Scene::render() {
-  for(auto mesh : mMeshes) {
+  for(auto mesh : _meshes) {
     mesh->render();
   }
   _octree->render();
@@ -29,6 +39,10 @@ void Scene::render() {
 
 void Scene::calculateOctree() {
   _octree->subdivide();
+}
+
+std::vector<Light*>& Scene::lights() {
+    return _lights;
 }
 
 
