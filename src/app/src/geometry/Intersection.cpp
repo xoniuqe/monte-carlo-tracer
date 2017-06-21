@@ -102,10 +102,11 @@ Vertex Intersection::barycentricInterpolation(const Vertex& a, const Vertex&b, c
     float d20 = glm::dot(v2,v0);
     float d21 = glm::dot(v2,v1);
     float inv = 1.f / (d00 * d11 - d01 * d01);
-    float v = (d11 * d20 - d01 * d21) * inv;
-    float w = (d00 * d21 - d01 * d20) * inv;
-    float u = 1.f - v - w;
-    result.color = v * a.color + w * b.color + u * c.color;
+    float alpha = (d11 * d20 - d01 * d21) * inv;
+    float beta = (d00 * d21 - d01 * d20) * inv;
+    float gamma = 1.f - alpha - beta;
+    result.color = alpha * a.color + beta * b.color + gamma * c.color;
+    result.normal = alpha * a.normal + beta * b.normal + gamma * c.normal;
     return result;
 }
   

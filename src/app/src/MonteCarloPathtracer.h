@@ -20,7 +20,7 @@ class MonteCarloPathtracer {
   int _screen_width, _screen_height;
   int _max_depth;
   int _aa;
-  glm::vec3 traceRay(const glm::vec3& origin, const glm::vec3& direction, const int depth);//const Vertex& vert, const int depth);//const glm::vec3& normal, const int depth);
+  glm::vec3 traceRay(const glm::vec3& origin, const glm::vec3& direction, const int depth, const glm::vec3& view_direction);//const Vertex& vert, const int depth);//const glm::vec3& normal, const int depth);
   glm::vec3 randomDirection(const glm::vec3& n);
 };
 #endif

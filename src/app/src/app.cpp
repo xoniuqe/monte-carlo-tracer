@@ -75,7 +75,7 @@ int main(int argc, char * argv[]) {
         ("r-height", po::value<int>()->default_value(300), "Render texture height")
         ("max-rec", po::value<int>()->default_value(3), "Maximum recursion depth")
         ("samples", po::value<int>()->default_value(8), "Number of samples")
-        ("aa", po::value<int>()->default_value(0), "Antiliasing level");
+        ("aa", po::value<int>()->default_value(0), "Antiliasing level (not implemented)");
     po::variables_map vm;
     try {
         po::store(po::parse_command_line(argc, argv, desc), vm);
@@ -134,10 +134,6 @@ int main(int argc, char * argv[]) {
     } else {
         std::cerr << std::string(importer.GetErrorString()) << std::endl;
     }
-    const aiScene* ai_scene2 = importer.ReadFile("../data/test.obj", aiProcess_Triangulate | aiProcess_GenNormals);
-    if(ai_scene2) {
-        //   loadScene(ai_scene2);
-    }
     
     
     setupScreenTexture();
@@ -148,13 +144,11 @@ int main(int argc, char * argv[]) {
         input();
         display(); 
     }
-    
     delete _monte_carlo_pathtracer;
     delete _camera;
     delete _scene;
     delete _arcball;
     delete ai_scene1;
-    delete ai_scene2;
     for(auto mat : Material::materials) {
         delete mat.second;
     }
@@ -230,6 +224,7 @@ void input() {
     if(event.type == SDL_QUIT){
         _quit = true;
     }
+    //arcball camera rotation, not used because its bugged
     /* if(event.button.button == SDL_BUTTON_LEFT) {//type == SDL_MOUSEBUTTONDOWN) {
         int x,y;
         _arcball->setMouse(_mouse_position);
@@ -261,7 +256,7 @@ void input() {
     }
     }
 }
-bool reflect = false;
+int reflect = 0;
 int refract = 0;
 void loadScene(const aiScene* aiScene) {
     std::map<int, int> material_mapping = {};
@@ -271,25 +266,20 @@ void loadScene(const aiScene* aiScene) {
         aiMaterial *mtl = aiScene->mMaterials[index];
         aiColor4D diffuse;
         
-        //if(Material::materials[index] == NULL) {
         Material *mat = Material::new_material();
         material_mapping[index] = mat->index;
-        //mtl->Get(AI_MATKEY_SHININESS, mat->shininess);
-        mat->shininess = 0.5f;
+        mat->shininess = 50.f; //specular shininess
         mtl->Get(AI_MATKEY_REFRACTI, mat->refraction_index);
         mtl->Get(AI_MATKEY_COLOR_DIFFUSE, diffuse);
         mat->diffuse = glm::vec3(diffuse.r, diffuse.g, diffuse.b);
-        /*if(reflect) {
-            mat->reflectivity = 0.8f;
-            reflect = false;
-        } else
-            reflect = true;
-        */
-        if(refract == 0) {
+        if(reflect == 0) { //adding random relfection 
+            mat->reflectivity = 1.f;
+        }
+        reflect++;        
+        if(refract == 0) { //added random refraction, currently not used
             mat->refraction_index = 5.f;
         }
         refract++;
-        //std::cout << mat->reflectivity << std::endl;
         
         if(aiGetMaterialColor(mtl, AI_MATKEY_COLOR_DIFFUSE, &diffuse) == AI_SUCCESS) {
             glm::vec3 color(diffuse.r, diffuse.g, diffuse.b);
@@ -303,7 +293,6 @@ void loadScene(const aiScene* aiScene) {
         std::vector<GLuint> indices;
         
         aiMesh* mesh = aiScene->mMeshes[i];
-        //std::cout << "num verts: " <<  mesh->mNumVertices << std::endl;
         for(unsigned int j = 0; j < mesh->mNumVertices; j++) {
             //glm::vec3 vert, norm;
             Vertex vert;
