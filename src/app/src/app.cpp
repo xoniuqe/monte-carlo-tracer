@@ -126,9 +126,9 @@ int main(int argc, char * argv[]) {
     AreaLight* light = new AreaLight(_light_position, 0.2f, 0.2f);
     light->color = glm::vec3(1.f,1.f,1.f);
     light->power = 1.f;
-    _scene->addLight(light);
+     _scene->addLight(light);
     Assimp::Importer importer;
-    const aiScene* ai_scene1 = importer.ReadFile("../data/scene.obj", aiProcess_Triangulate | aiProcess_GenNormals);
+    const aiScene* ai_scene1 = importer.ReadFile("../data/scene-with-light.obj", aiProcess_Triangulate | aiProcess_GenNormals);
     if(ai_scene1) {
         loadScene(ai_scene1);
     } else {
@@ -271,8 +271,9 @@ void loadScene(const aiScene* aiScene) {
         mat->shininess = 50.f; //specular shininess
         mtl->Get(AI_MATKEY_REFRACTI, mat->refraction_index);
         mtl->Get(AI_MATKEY_COLOR_DIFFUSE, diffuse);
+        mtl->Get(AI_MATKEY_COLOR_EMISSIVE, mat->emitting);
         mat->diffuse = glm::vec3(diffuse.r, diffuse.g, diffuse.b);
-        if(reflect == 0) { //adding random relfection 
+        if(reflect == 2) { //adding random relfection 
             mat->reflectivity = 1.f;
         }
         reflect++;        

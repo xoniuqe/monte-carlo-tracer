@@ -39,10 +39,15 @@ void MonteCarloPathtracer::startPathtracing() {
     tbb::parallel_for(tbb::blocked_range2d<int>(0,_screen_width, 0, _screen_height),[=](const tbb::blocked_range2d<int>& r) {
             for(auto x = r.rows().begin(); x != r.rows().end(); ++x) {
                 for(auto y = r.cols().begin(); y != r.cols().end(); ++y) {
-                    glm::vec3 pp = _camera->_p0 + dx * ((float) x + 0.5f) + dy * ((float) y + 0.5f);
-                    glm::vec3 direction = glm::vec3(pp) - _camera->_origin;//(tx,ty,-1.f);
-                    direction = glm::normalize(direction);
-                    _image[x + (_screen_width * y)] = (glm::u8vec3) (glm::clamp(traceRay(_camera->_origin, direction, 0, direction), glm::vec3(0,0,0), glm::vec3(1,1,1)) * 255.f);
+                    glm::vec3 resulting_color = glm::vec3(0,0,0);
+                    //for(auto i = 0; i < _num_samples; ++i) {
+                        glm::vec3 pp, direction;
+                        pp = _camera->_p0 + dx * ((float) x + 0.5f) + dy * ((float) y + 0.5f);
+                        direction = glm::normalize(glm::vec3(pp) - _camera->_origin);//(tx,ty,-1.f)
+                        
+                        resulting_color = glm::clamp(traceRay(_camera->_origin, direction, 0, direction), glm::vec3(0,0,0), glm::vec3(1,1,1));
+                        //}
+                    _image[x + (_screen_width * y)] = (glm::u8vec3) (resulting_color * 255.f) ;
                 }
             }
         });
@@ -74,6 +79,9 @@ glm::vec3 MonteCarloPathtracer::traceRay(const glm::vec3& origin, const glm::vec
       auto material = Material::materials[collider->material()];
       auto reflectivity = material->reflectivity;
       auto refraction = material->refraction_index;
+      if(glm::length(material->emitting) > glm::zero<float>()) {
+            return material->emitting;
+      }
       if(reflectivity > glm::zero<float>()) {
           reflect_color = traceRay(vert.position, glm::reflect(direction, vert.normal), depth + 1, view_direction);
       }
