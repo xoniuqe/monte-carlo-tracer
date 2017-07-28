@@ -8,9 +8,6 @@ Octree::Octree(int max_triangles) {
 }
 
 Octree::~Octree() {
-    //for(auto triangle : mRoot->triangles()) {
-    //    delete triangle;
-    //}
     delete _root;
 }
 

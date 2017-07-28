@@ -13,7 +13,7 @@ class OctreeNode {
   ~OctreeNode();
   void insert(Triangle* triangle, bool force=false);
   void subdivide();
-  int intersectsRay(const glm::vec3& origin, const glm::vec3& direction) const;
+  //int intersectsRay(const glm::vec3& origin, const glm::vec3& direction) const;
   void updateBoundingBox();
   void render() const;
   bool leaf() const;

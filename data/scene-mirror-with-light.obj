@@ -1,6 +1,6 @@
 # Blender v2.74 (sub 0) OBJ File: 'scene-with-light.blend'
 # www.blender.org
-mtllib test.mtl
+mtllib scene-mirror-with-light.mtl
 o Cube.001
 v -0.289802 0.053131 -0.047394
 v -0.220709 -0.072211 -0.289950

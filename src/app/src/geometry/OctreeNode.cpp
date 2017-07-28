@@ -21,9 +21,6 @@ OctreeNode::~OctreeNode() {
         delete child;
     }
     _children.clear();
-    for(auto triangle : _triangles) {
-        delete triangle;
-    }
     _triangles.clear();
 }
 
@@ -129,7 +126,6 @@ void OctreeNode::setBoundingBox() {
 }
 
 void OctreeNode::updateBoundingBox() {
-  std::cout << "update\n";
   glm::vec3 min = (*_triangles[0]).a.position, max = (*_triangles[0]).a.position;
   for(auto triangle : _triangles) {
     for(auto i = 0; i <= 2; i++) {
@@ -145,8 +141,6 @@ void OctreeNode::updateBoundingBox() {
   }
   _center = (max + min) * 0.5f;
   _halfsize = max - _center;
-  std::cout << "_center: " << _center.x << " " << _center.y << " " << _center.z << "\n";
-  std::cout << "halfsize: " << _halfsize.x << " " << _halfsize.y << " " << _halfsize.z << "\n";
   setBoundingBox();
 }
 

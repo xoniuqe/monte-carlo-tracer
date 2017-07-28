@@ -1,4 +1,6 @@
+#include<Windows.h>
 #include<iostream>
+
 #include<SDL2/SDL.h>
 #include<GL/glew.h>
 
@@ -6,15 +8,17 @@
 #include<assimp/Importer.hpp>
 #include<assimp/postprocess.h>
 
+#include<string>
 #include<vector>
 #include<glm/glm.hpp>
 #include<glm/gtc/matrix_transform.hpp>
 #include<glm/gtc/type_ptr.hpp>
 
 #include<thread>
+#include<chrono>
 
-#include <boost/config.hpp>
-#include <boost/program_options.hpp>
+#include "boost/config.hpp"
+#include "boost/program_options.hpp"
 
 #include "ArcBall.h"
 #include "Camera.h"
@@ -29,6 +33,10 @@
 #include "geometry/Octree.h"
 #include "geometry/OctreeNode.h"
 
+#include "util/Image.h"
+
+using namespace std::chrono;
+
 int setupWindow(int width, int height);
 void setupScreenTexture();
 void renderScene();
@@ -37,6 +45,10 @@ void renderTracerTexture();
 void display();
 void input();
 void loadScene(const aiScene* scene);
+int exit();
+void start_pathtracer();
+void save_tga();
+
 
 SDL_Window* _window;
 SDL_GLContext _context;
@@ -57,106 +69,189 @@ int _height = 600;
 int _render_screen_width = 200;
 int _render_screen_height = 150;
 int _max_recursion = 3;
-int _num_samples = 8;
+int _num_samples = 64;
 int _antialiasing = 0;
+bool _directstart = false;
+bool _save_tga = true;
+//string _filename;
+bool _exit_after_render = false;
 ArcBall* _arcball; 
 bool _is_tracing = false;
 glm::vec3 _mouse_position;
 
 namespace po = boost::program_options;
 
+#ifdef _WIN32
+#undef main
+#endif
+
+
+
 int main(int argc, char * argv[]) {
 
-    po::options_description desc("Raytracer Options");
-    desc.add_options()
-        ("width", po::value<int>()->default_value(800), "Screen width")
-        ("height", po::value<int>()->default_value(600), "Screen height")
-        ("r-width", po::value<int>()->default_value(400), "Render texture width")
-        ("r-height", po::value<int>()->default_value(300), "Render texture height")
-        ("max-rec", po::value<int>()->default_value(3), "Maximum recursion depth")
-        ("samples", po::value<int>()->default_value(8), "Number of samples")
-        ("aa", po::value<int>()->default_value(0), "Antiliasing level (not implemented)");
-    po::variables_map vm;
-    try {
-        po::store(po::parse_command_line(argc, argv, desc), vm);
-        po::notify(vm);
-        _height = vm["height"].as<int>();
-        _width = vm["width"].as<int>();
-        _render_screen_height = vm["r-height"].as<int>();
-        _render_screen_width = vm["r-width"].as<int>();
-        _max_recursion = vm["max-rec"].as<int>();
-        _num_samples = vm["samples"].as<int>();
-        _antialiasing = vm["aa"].as<int>();
-        std::cout << _height << " " << _width << " " << _antialiasing << "\n";
-    }
-    catch (po::error& e) {
-        std::cerr << "ERROR: " << e.what() << std::endl << std::endl; 
-        std::cerr << desc << std::endl;
-        return 1;
-    }
-    std::cout << _height << " " << _width << " " << _antialiasing << "\n";
-    if(setupWindow(_width,_height)){
-        return 1;
-    }
-    glewInit();
-    
-    
-    _program_id = LoadShaders("../shader/vert.glsl", "../shader/frag.glsl");
-    glUseProgram(_program_id);
-    _matrix_id = glGetUniformLocation(_program_id, "MVP");
-    _loc_m = glGetUniformLocation(_program_id, "V");
-    _loc_v= glGetUniformLocation(_program_id, "M");
-    _loc_light= glGetUniformLocation(_program_id, "lightPosition");
-    
-    glUseProgram(0);
-    
-    _camera = new Camera(glm::vec3(0,0,-2), glm::vec3(0,0,0), 45.f, 4.f / 3.f);
-    _model = glm::mat4(1.f);
-    
-    float radius = sqrtf(float(_width * _width + _height * _height)) * 0.5f;
-    _arcball = new ArcBall();
-    _arcball->place(glm::vec3(0,0,0), 3.f);
+po::options_description desc("Raytracer Options");
+desc.add_options()
+("width", po::value<int>()->default_value(1024), "Screen width")
+("height", po::value<int>()->default_value(720), "Screen height")
+("r-width", po::value<int>()->default_value(1024), "Render texture width")
+("r-height", po::value<int>()->default_value(720), "Render texture height")
+("max-rec", po::value<int>()->default_value(3), "Maximum recursion depth")
+("samples", po::value<int>()->default_value(32), "Number of samples")
+("aa", po::value<int>()->default_value(0), "Antiliasing level (not implemented)")
+("direct-start", po::value<bool>()->default_value(true), "Direct start of rendering")
+("tga", po::value<bool>()->default_value(false), "save as tga")
+//("filename", po::value<string>()->default_value("output.tga"), "target filename for tga export (needs .tga)")
+("exit", po::value<bool>()->default_value(true), "exit after render?");
 
-    _mvp = _camera->_projection * _camera->_view * _model;
-    
-    _light_position = glm::vec3(-0.2f,0.8f,-0.2f);
-    
-    _scene = new Scene();
-    
-    AreaLight* light = new AreaLight(_light_position, 0.2f, 0.2f);
-    light->color = glm::vec3(1.f,1.f,1.f);
-    light->power = 1.f;
-     _scene->addLight(light);
-    Assimp::Importer importer;
-    const aiScene* ai_scene1 = importer.ReadFile("../data/scene-with-light.obj", aiProcess_Triangulate | aiProcess_GenNormals);
-    if(ai_scene1) {
-        loadScene(ai_scene1);
-    } else {
-        std::cerr << std::string(importer.GetErrorString()) << std::endl;
-    }
-    
-    
-    setupScreenTexture();
-    
-    _scene->calculateOctree();
-    _monte_carlo_pathtracer = new MonteCarloPathtracer(_scene, _camera, _render_screen_width, _render_screen_height, _num_samples, _max_recursion, _antialiasing);
-    while(!_quit) {
-        input();
-        display(); 
-    }
-    delete _monte_carlo_pathtracer;
-    delete _camera;
-    delete _scene;
-    delete _arcball;
-    delete ai_scene1;
-    for(auto mat : Material::materials) {
-        delete mat.second;
-    }
-    SDL_GL_DeleteContext(_context);
-    SDL_DestroyWindow(_window);
-    SDL_Quit();
-    return 0;
+po::variables_map vm;
+try {
+	po::store(po::parse_command_line(argc, argv, desc), vm);
+	po::notify(vm);
+	_height = vm["height"].as<int>();
+	_width = vm["width"].as<int>();
+	_render_screen_height = vm["r-height"].as<int>();
+	_render_screen_width = vm["r-width"].as<int>();
+	_max_recursion = vm["max-rec"].as<int>();
+	_num_samples = vm["samples"].as<int>();
+	_antialiasing = vm["aa"].as<int>();
+	_directstart = vm["direct-start"].as<bool>();
+	_save_tga = vm["tga"].as<bool>();
+	//_filename = vm["filename"].as<string>();
+	_exit_after_render = vm["exit"].as<bool>();
+	//std::cout << _filename << std::endl;
+	//std::cout << _height << " " << _width << " " << _antialiasing << "\n";
 }
+catch (po::error& e) {
+	std::cerr << "ERROR: " << e.what() << std::endl << std::endl;
+	std::cerr << desc << std::endl;
+	return 1;
+}
+std::cout << _render_screen_height << "; " << _render_screen_width << "; " << _max_recursion << ";" << _num_samples << "\n";
+if (setupWindow(_width, _height)) {
+	return 1;
+}
+glewInit();
+
+
+_program_id = LoadShaders("../shader/vert.glsl", "../shader/frag.glsl");
+glUseProgram(_program_id);
+_matrix_id = glGetUniformLocation(_program_id, "MVP");
+_loc_m = glGetUniformLocation(_program_id, "V");
+_loc_v = glGetUniformLocation(_program_id, "M");
+_loc_light = glGetUniformLocation(_program_id, "lightPosition");
+
+glUseProgram(0);
+
+_camera = new Camera(glm::vec3(0, 0, -2), glm::vec3(0, 0, 0), 45.f, _render_screen_width / _render_screen_height);
+_model = glm::mat4(1.f);
+
+float radius = sqrtf(float(_width * _width + _height * _height)) * 0.5f;
+_arcball = new ArcBall();
+_arcball->place(glm::vec3(0, 0, 0), 3.f);
+
+_mvp = _camera->_projection * _camera->_view * _model;
+
+_light_position = glm::vec3(0.f, 0.85f, 0.f);
+
+_scene = new Scene();
+
+AreaLight* light = new AreaLight(_light_position, 0.89122f, 0.89122f);
+light->color = glm::vec3(1.f, 1.f, 1.f);
+light->power = 1.f;
+_scene->addLight(light);
+Assimp::Importer importer;
+const aiScene* ai_scene1 = importer.ReadFile("../data/scene-mirror-with-light.obj", aiProcess_Triangulate | aiProcess_GenNormals);
+if (ai_scene1) {
+	loadScene(ai_scene1);
+}
+else {
+	std::cerr << std::string(importer.GetErrorString()) << std::endl;
+}
+
+
+setupScreenTexture();
+
+_scene->calculateOctree();
+_monte_carlo_pathtracer = new MonteCarloPathtracer(_scene, _camera, _render_screen_width, _render_screen_height, _num_samples, _max_recursion, _antialiasing);
+while (!_quit) {
+	if (_directstart && !_is_tracing) {
+		_render_mode = 0;
+		start_pathtracer();
+	}
+	if (!_directstart) {
+		input();
+	}
+	display();
+}
+return exit();
+}
+
+void save_tga() {
+	TGAImage *img = new TGAImage(_render_screen_width, _render_screen_height);
+
+	//declare a temporary color variable
+	Colour c;
+
+	//Loop through image and set all pixels to red
+	//_image[x + (_screen_width * y)]
+	for (int x = 0; x < _render_screen_width; x++) {
+		for (int y = 0; y < _render_screen_height; y++) {
+			glm::u8vec3 color = _monte_carlo_pathtracer->_image[x + (_render_screen_width * y)];
+			c.r = color.r;
+			c.g = color.g;
+			c.b = color.b;
+			c.a = 255;
+			img->setPixel(c, y, x);
+		}
+	}	
+
+	//write the image to disk
+	string filename =  "output.tga";
+	img->WriteImage(filename);
+
+}
+void start_pathtracer() {
+	if (!_is_tracing) {
+		_render_thread = std::thread([=]() {
+			//std::cout << "Measurement resolution: " <<
+			//	duration_cast<nanoseconds>(steady_clock::duration(1)).count()
+			//		<< "ns" << std::endl;
+			std::cout << "start\n";
+			auto start = steady_clock::now();
+			_monte_carlo_pathtracer->startPathtracing();
+			auto end = steady_clock::now();
+			auto dur = duration_cast<milliseconds>(end - start);
+			std::cout << "end\n";
+
+			std::cout << "Measured time: ;" << dur.count() << "ms" << std::endl;
+			std::cout << "Delta: ;" <<
+				duration_cast<milliseconds>(dur - seconds(1)).count()
+				<< "ms" << std::endl;
+			if (_save_tga) {
+				save_tga();
+			}
+			if (_exit_after_render) {
+				_quit = true;
+			}
+		});
+		_is_tracing = true;
+	}
+}
+int exit() {
+	delete _monte_carlo_pathtracer;
+	delete _camera;
+	delete _scene;
+	delete _arcball;
+	//delete ai_scene1;
+	for (auto mat : Material::materials) {
+		delete mat.second;
+	}
+	SDL_GL_DeleteContext(_context);
+	SDL_DestroyWindow(_window);
+	SDL_Quit();
+	return 0;
+}
+
 float rotate = 0.f;
 void renderTracerTexture() {
     glDisable(GL_DEPTH_TEST);
@@ -248,10 +343,7 @@ void input() {
             _render_mode %= 2;
         }
         if(event.key.keysym.sym == SDLK_r) {        
-            if(!_is_tracing) {
-                _render_thread = std::thread([=](){_monte_carlo_pathtracer->startPathtracing();});
-                _is_tracing = true;
-            }
+			start_pathtracer();
         }
     }
     }
@@ -264,19 +356,26 @@ void loadScene(const aiScene* aiScene) {
     for(auto i = 0; i < aiScene->mNumMeshes; i++) {
         int index = aiScene->mMeshes[i]->mMaterialIndex;
         aiMaterial *mtl = aiScene->mMaterials[index];
-        aiColor4D diffuse;
+		aiColor4D diffuse, emitting;
         
         Material *mat = Material::new_material();
         material_mapping[index] = mat->index;
-        mat->shininess = 50.f; //specular shininess
-        mtl->Get(AI_MATKEY_REFRACTI, mat->refraction_index);
+       // mat->shininess = 50.f; //specular shininess
+		//mtl->Get(AI_MATKEY_REFLECTI, mat->reflectivity);
+       // mtl->Get(AI_MATKEY_REFRACTI, mat->refraction_index);
+		mtl->Get(AI_MATKEY_SHININESS, mat->shininess);
+		mtl->Get(AI_MATKEY_REFRACTI, mat->reflectivity);
         mtl->Get(AI_MATKEY_COLOR_DIFFUSE, diffuse);
-        mtl->Get(AI_MATKEY_COLOR_EMISSIVE, mat->emitting);
+        mtl->Get(AI_MATKEY_COLOR_EMISSIVE, emitting);
+		mat->emitting = glm::vec3(emitting.r, emitting.g, emitting.b);
         mat->diffuse = glm::vec3(diffuse.r, diffuse.g, diffuse.b);
-        if(reflect == 2) { //adding random relfection 
-            mat->reflectivity = 1.f;
-        }
-        reflect++;        
+		//if (mat->index == 4) {
+		//	mat->emitting = glm::vec3(1, 1, 1);
+		//}
+        //if(reflect == 1) { //adding random relfection 
+        //    mat->reflectivity = 1.f;
+        //}
+        //reflect++;        
         if(refract == 0) { //added random refraction, currently not used
             mat->refraction_index = 5.f;
         }
@@ -316,7 +415,7 @@ void loadScene(const aiScene* aiScene) {
                 indices.push_back(face.mIndices[k]);
             }
         }
-        std::cout << "added mesh\n";
+        //std::cout << "added mesh\n";
         auto _mesh = new Mesh(std::move(vertices), std::move(indices));
         _mesh->material(material_mapping[index]);
         _scene->addMesh(_mesh);

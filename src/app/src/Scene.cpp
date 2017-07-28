@@ -9,14 +9,11 @@ Scene::Scene() {
 }
 
 Scene::~Scene() {
-    /*for(auto mesh : _meshes) {
+    for(auto mesh : _meshes) {
         delete mesh;
     }
-    for(auto light : _lights) {
-        // delete light;
-        }*/
     //deleting is bugged because I did not use smart pointers 
-    // delete _octree;
+    delete _octree;
 }
 
 void Scene::addMesh(Mesh* mesh) {
@@ -71,10 +68,12 @@ int Scene::intersection(const glm::vec3& origin, const glm::vec3& direction, flo
       }
     }
   }
+  possible_intersections.clear();
   res.position = origin + direction * best;
   *out = res;
   *out_t = best;
   out_mesh = mesh_res;
+  mesh_res = NULL;
   //outmesh noch setzen
   return result;
 }
